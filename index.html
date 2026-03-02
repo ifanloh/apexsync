@@ -1,42 +1,61 @@
-<div class="panel" style="margin-top:25px;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h3>Weekly Training Plan</h3>
-        <button onclick="generatePlan()" style="padding:5px 10px; font-size:11px; cursor:pointer;">Regenerate Plan</button>
+<div class="input-box">
+    <label>GPX Course File</label>
+    <div style="display: flex; gap: 10px; margin-top: 6px;">
+        <input type="file" id="in-gpx-file" accept=".gpx" style="display:none" onchange="handleFile(this)">
+        <button type="button" onclick="document.getElementById('in-gpx-file').click()" 
+                style="background: #21262d; color: white; border: 1px solid var(--border); padding: 10px; border-radius: 8px; cursor: pointer; flex: 1;">
+            Choose .GPX File
+        </button>
     </div>
-    <div id="plan-container" style="display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; margin-top:10px;">
-        </div>
+    <div id="file-status" style="font-size: 11px; color: var(--accent); margin-top: 5px;"></div>
+    <textarea id="in-gpx-content" style="display:none"></textarea> 
 </div>
 
 <script>
-    async function getPlan() {
-        const res = await fetch(`/api/get-plan?user_id=${userId}`);
-        const data = await res.json();
-        if(data.plan_json) renderPlan(data.plan_json);
+    let gpxString = "";
+
+    function handleFile(input) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                gpxString = e.target.result;
+                document.getElementById('file-status').innerText = `✅ Loaded: ${file.name}`;
+                
+                // Opsional: Coba ekstrak elevasi otomatis dari GPX
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(gpxString, "text/xml");
+                const eleNodes = xmlDoc.getElementsByTagName("ele");
+                if(eleNodes.length > 0) {
+                    console.log("Elevation data found in GPX");
+                }
+            };
+            reader.readAsText(file);
+        }
     }
 
-    function renderPlan(plan) {
-        const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-        document.getElementById('plan-container').innerHTML = days.map(day => `
-            <div style="background:#0d1117; padding:10px; border-radius:8px; border:1px solid #30363d; text-align:center;">
-                <div style="font-size:10px; color:#8b949e; text-transform:uppercase;">${day}</div>
-                <div style="font-size:12px; font-weight:bold; margin-top:5px; color:var(--accent);">${plan[day]}</div>
-            </div>
-        `).join('');
-    }
+    async function saveStrategy() {
+        // Ambil data dari form
+        const payload = {
+            user_id: userId,
+            race_name: document.getElementById('in-race-name').value,
+            target_km: document.getElementById('in-km').value,
+            total_ascent: document.getElementById('in-elev').value,
+            target_finish: document.getElementById('in-finish').value,
+            race_date: document.getElementById('in-date').value,
+            gpx_content: gpxString, // Hasil bacaan file tadi
+            target_type: "Trail"
+        };
 
-    async function generatePlan() {
-        const res = await fetch('/api/generate-plan', {
+        const res = await fetch('/api/save-strategy', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ 
-                user_id: userId, 
-                target_km: document.getElementById('in-km').value,
-                target_type: "Trail" 
-            })
+            body: JSON.stringify(payload)
         });
-        const data = await res.json();
-        renderPlan(data.plan);
-    }
 
-    // Panggil getPlan() di dalam function loadCommander()
+        if(res.ok) {
+            alert("Race Strategy & GPX Map Locked!");
+            location.reload();
+        }
+    }
 </script>
