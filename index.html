@@ -10,12 +10,12 @@
         :root {
             --bg: #0b0e14; --card: #161b22; --border: #30363d; --text: #c9d1d9;
             --cyan: #00f2ff; --orange: #fc4c02; --red: #ff4d4d; --green: #2ecc71;
-            --sidebar-w: 260px; --sidebar-c: 70px;
+            --sidebar-w: 260px; --sidebar-c: 75px;
         }
         
         body {
-            font-family: 'Inter', -apple-system, sans-serif; background-color: var(--bg); color: var(--text);
-            margin: 0; display: flex; transition: all 0.3s ease; overflow-x: hidden;
+            font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text);
+            margin: 0; display: flex; transition: all 0.3s ease; height: 100vh; overflow: hidden;
         }
 
         /* --- SIDEBAR STYLES --- */
@@ -23,43 +23,59 @@
             width: var(--sidebar-w); height: 100vh; background: var(--card);
             border-right: 1px solid var(--border); position: fixed; left: 0; top: 0;
             display: flex; flex-direction: column; transition: width 0.3s ease;
-            z-index: 1000; overflow: hidden;
+            z-index: 2000;
         }
         #sidebar.collapsed { width: var(--sidebar-c); }
 
-        .sidebar-header { padding: 20px; display: flex; align-items: center; justify-content: space-between; }
-        .profile-box { padding: 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; white-space: nowrap; }
-        .profile-img { width: 35px; height: 35px; border-radius: 50%; background: var(--cyan); display: flex; align-items: center; justify-content: center; color: black; font-weight: bold; flex-shrink: 0; }
-        .nav-links { padding: 10px; flex-grow: 1; }
-        .nav-item { display: flex; align-items: center; gap: 15px; padding: 12px 10px; color: var(--text); text-decoration: none; border-radius: 6px; transition: 0.2s; margin-bottom: 5px; white-space: nowrap; }
-        .nav-item:hover, .nav-item.active { background: #21262d; color: var(--cyan); }
-        .btn-sync { background: var(--orange); color: white; margin: 20px 10px; padding: 12px; border-radius: 6px; text-decoration: none; display: flex; align-items: center; gap: 10px; font-weight: bold; white-space: nowrap; }
+        .sidebar-header { padding: 20px; display: flex; align-items: center; justify-content: space-between; min-height: 60px; }
+        .logo-text { font-weight: 800; color: white; letter-spacing: 1px; display: block; }
+        .collapsed .logo-text { display: none; }
 
-        /* --- MAIN CONTENT & GRID --- */
-        #main-content { margin-left: var(--sidebar-w); padding: 25px; width: 100%; transition: margin-left 0.3s ease; box-sizing: border-box; }
+        .profile-box { padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; white-space: nowrap; overflow: hidden; }
+        .profile-img { width: 35px; height: 35px; border-radius: 50%; background: var(--cyan); display: flex; align-items: center; justify-content: center; color: black; font-weight: bold; flex-shrink: 0; }
+        .profile-info { transition: opacity 0.2s; }
+        .collapsed .profile-info { opacity: 0; width: 0; pointer-events: none; }
+
+        .nav-links { padding: 10px; flex-grow: 1; overflow-y: auto; overflow-x: hidden; }
+        .nav-item { display: flex; align-items: center; gap: 15px; padding: 12px 15px; color: var(--text); text-decoration: none; border-radius: 6px; transition: 0.2s; margin-bottom: 5px; white-space: nowrap; cursor: pointer; }
+        .nav-item:hover, .nav-item.active { background: #21262d; color: var(--cyan); }
+        .collapsed .nav-item span { display: none; }
+
+        .btn-sync { background: var(--orange); color: white; margin: 10px; padding: 12px; border-radius: 6px; text-decoration: none; display: flex; align-items: center; gap: 12px; font-weight: bold; white-space: nowrap; justify-content: center; }
+        .collapsed .btn-sync span { display: none; }
+
+        /* --- MAIN CONTENT --- */
+        #main-content { margin-left: var(--sidebar-w); padding: 30px; width: 100%; height: 100vh; overflow-y: auto; transition: margin-left 0.3s ease; box-sizing: border-box; }
         body.collapsed-mode #main-content { margin-left: var(--sidebar-c); }
 
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; max-width: 1300px; margin: 0 auto; }
-        .card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 4px; }
-        .card-h { font-size: 11px; font-weight: 600; color: #8b949e; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; text-transform: uppercase; }
-        
-        .big-val { font-size: 38px; font-weight: 800; color: white; text-align: center; margin: 10px 0; }
+        .page { display: none; animation: fadeIn 0.4s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; max-width: 1300px; }
+        .card { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 6px; }
+        .card-h { font-size: 11px; font-weight: 600; color: #8b949e; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; text-transform: uppercase; }
+        .big-val { font-size: 42px; font-weight: 800; color: white; text-align: center; margin: 15px 0; }
         .span-2 { grid-column: span 2; }
 
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { text-align: left; color: #8b949e; font-weight: 400; padding-bottom: 8px; border-bottom: 1px solid #21262d; }
-        td { padding: 8px 0; border-bottom: 1px solid #21262d; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; color: #8b949e; padding-bottom: 10px; border-bottom: 1px solid #21262d; }
+        td { padding: 10px 0; border-bottom: 1px solid #21262d; }
         .zone-p { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-        #toggle-sidebar { background: none; border: none; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        #toggle-sidebar { background: none; border: none; color: var(--text); cursor: pointer; padding: 5px; }
         
-        /* Recovery Styles */
-        .recovery-bar { height: 6px; background: linear-gradient(to right, var(--red), var(--orange), var(--green), var(--cyan)); border-radius: 3px; margin-top: 15px; position: relative; }
-        .recovery-pointer { position: absolute; top: -8px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 8px solid white; transition: left 0.5s ease; }
+        /* Progress & Bars */
+        .bar-container { height: 6px; background: #21262d; border-radius: 3px; margin: 10px 0; overflow: hidden; }
+        .bar-fill { height: 100%; background: var(--orange); transition: width 0.5s ease; }
+        .recovery-gradient { height: 8px; background: linear-gradient(to right, var(--red), var(--orange), var(--green), var(--cyan)); border-radius: 4px; position: relative; margin-top: 20px; }
+        .pointer { position: absolute; top: -10px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid white; transition: left 0.5s ease; }
     </style>
 </head>
-<body class="collapsed-mode"> <nav id="sidebar" class="collapsed">
+<body class="collapsed-mode">
+
+<nav id="sidebar" class="collapsed">
     <div class="sidebar-header">
-        <span id="logo-text" style="font-weight: 800; color: white;">APEXNITY</span>
+        <span class="logo-text">APEXNITY</span>
         <button id="toggle-sidebar"><i data-lucide="menu"></i></button>
     </div>
 
@@ -72,9 +88,9 @@
     </div>
 
     <div class="nav-links">
-        <a href="#" class="nav-item active"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></a>
-        <a href="#" class="nav-item"><i data-lucide="map"></i> <span>116K Strategy</span></a>
-        <a href="#" class="nav-item"><i data-lucide="settings"></i> <span>Settings</span></a>
+        <div class="nav-item active" onclick="switchPage('dashboard')"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></div>
+        <div class="nav-item" onclick="switchPage('strategy')"><i data-lucide="map"></i> <span>116K Strategy</span></div>
+        <div class="nav-item" onclick="switchPage('settings')"><i data-lucide="settings"></i> <span>Settings</span></div>
     </div>
 
     <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api/metrics&scope=activity:read_all" class="btn-sync">
@@ -83,82 +99,104 @@
 </nav>
 
 <main id="main-content">
-    <div class="grid">
-        <div class="card">
-            <div class="card-h">Running Fitness <i data-lucide="info" size="12"></i></div>
-            <div class="big-val" id="v-ctl">0</div>
-            <div style="margin-top:15px;">
-                <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:4px;">
-                    <span>Endurance</span><span>80%</span>
+    <section id="page-dashboard" class="page active">
+        <div class="grid">
+            <div class="card">
+                <div class="card-h">Running Fitness <i data-lucide="zap" size="12" style="color:var(--cyan)"></i></div>
+                <div class="big-val" id="v-ctl">0</div>
+                <div style="margin-top:20px;">
+                    <div style="display:flex; justify-content:space-between; font-size:11px;"><span>Endurance</span><span id="v-end-pct">0%</span></div>
+                    <div class="bar-container"><div class="bar-fill" id="v-end-fill" style="width: 0%"></div></div>
                 </div>
-                <div style="height:4px; background:#21262d; border-radius:2px;"><div style="width:80%; height:100%; background:var(--orange);"></div></div>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Training Status</div>
+                <div id="v-status" style="color:var(--orange); font-size:20px; font-weight:bold; margin-bottom:10px;">Analyzing...</div>
+                <p id="v-status-desc" style="font-size:11px; color:#8b949e; line-height:1.5;"></p>
+            </div>
+
+            <div class="card span-2">
+                <div class="card-h">Weekly Activity (KM)</div>
+                <canvas id="weeklyChart" height="90"></canvas>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Recent Activities</div>
+                <table id="act-table"></table>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Personal Records</div>
+                <table id="pr-table"></table>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Recovery Status</div>
+                <div style="text-align:center; padding: 15px 0;">
+                    <div style="font-size:36px; font-weight:800; color:white;" id="rec-val">0%</div>
+                    <div style="font-size:11px; color:#8b949e;" id="rec-desc">Calculating...</div>
+                </div>
+                <div class="recovery-gradient"><div class="pointer" id="rec-pointer" style="left: 0%;"></div></div>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Race Predictor</div>
+                <table id="race-table"></table>
+            </div>
+
+            <div class="card span-2">
+                <div class="card-h">Performance Management Chart (PMC)</div>
+                <canvas id="pmcChart" height="150"></canvas>
+            </div>
+
+            <div class="card span-2">
+                <div class="card-h">Threshold Pace Zones</div>
+                <div style="font-size:14px; margin-bottom:15px;">Target Threshold Pace: <b id="v-target-pace">--'--"</b></div>
+                <table id="zone-table"></table>
             </div>
         </div>
+    </section>
 
-        <div class="card">
-            <div class="card-h">Training Status <i data-lucide="info" size="12"></i></div>
-            <div id="status-label" style="color:var(--orange); font-size:18px; font-weight:bold; margin-bottom:5px;">Optimized</div>
-            <p style="font-size:11px; line-height:1.4; color:#8b949e; margin:0;">Tingkat kebugaran meningkat stabil untuk persiapan 116K kamu.</p>
-        </div>
-
+    <section id="page-strategy" class="page">
         <div class="card span-2">
-            <div class="card-h">Weekly Activity (KM)</div>
-            <canvas id="weeklyChart" height="90"></canvas>
-        </div>
-
-        <div class="card">
-            <div class="card-h">Recent Activities</div>
-            <table>
-                <thead><tr style="color:#8b949e"><th>Type</th><th>Day</th><th>Vol</th><th>Load</th></tr></thead>
-                <tbody id="act-body"></tbody>
-            </table>
-        </div>
-
-        <div class="card">
-            <div class="card-h">Personal Records</div>
-            <table id="pr-table"></table>
-        </div>
-
-        <div class="card">
-            <div class="card-h">Recovery Status</div>
-            <div style="text-align:center; padding: 10px 0;">
-                <div style="font-size:32px; font-weight:bold; color:white;" id="rec-val">80%</div>
-                <div style="font-size:10px; color:#8b949e;" id="rec-desc">21 hr(s) till full recovery</div>
-            </div>
-            <div class="recovery-bar">
-                <div class="recovery-pointer" id="rec-pointer" style="left: 80%;"></div>
+            <h2>116K Strategy Plan</h2>
+            <p style="color:#8b949e">Halaman ini digunakan untuk mengunggah rute GPX dan merencanakan pace antar stasiun.</p>
+            <div style="border: 2px dashed var(--border); padding: 40px; text-align:center; border-radius: 8px;">
+                <i data-lucide="upload-cloud" size="48" style="color:var(--cyan); margin-bottom:15px;"></i>
+                <p>Drag & Drop file GPX di sini atau klik untuk upload</p>
             </div>
         </div>
+    </section>
 
-        <div class="card">
-            <div class="card-h">Race Predictor</div>
-            <table id="race-table" style="font-size:11px;"></table>
-        </div>
-
+    <section id="page-settings" class="page">
         <div class="card span-2">
-            <div class="card-h">Performance Management Chart (PMC)</div>
-            <canvas id="pmcChart" height="150"></canvas>
+            <h2>User Settings</h2>
+            <div style="margin-top:20px;">
+                <label style="display:block; margin-bottom:10px;">Max Heart Rate</label>
+                <input type="number" value="192" style="background:#0d1117; border:1px solid var(--border); color:white; padding:10px; width:100%; border-radius:4px;">
+                <label style="display:block; margin-top:20px; margin-bottom:10px;">Resting Heart Rate</label>
+                <input type="number" value="55" style="background:#0d1117; border:1px solid var(--border); color:white; padding:10px; width:100%; border-radius:4px;">
+                <button style="margin-top:20px; background:var(--cyan); color:black; border:none; padding:12px 25px; border-radius:4px; font-weight:bold; cursor:pointer;">Save Preferences</button>
+            </div>
         </div>
-
-        <div class="card span-2">
-            <div class="card-h">Threshold Pace Zones</div>
-            <div style="font-size:13px; margin-bottom:10px;">Threshold Pace: <b>04'13"</b></div>
-            <table style="font-size:11px;">
-                <tr><td><span class="zone-p" style="background:var(--green)"></span>Aerobic Endurance</td><td style="text-align:right">04'54" - 05'54"</td></tr>
-                <tr><td><span class="zone-p" style="background:var(--orange)"></span>Threshold Pace</td><td style="text-align:right">04'08" - 04'31"</td></tr>
-                <tr><td><span class="zone-p" style="background:var(--red)"></span>Anaerobic Power</td><td style="text-align:right">< 03'46"</td></tr>
-            </table>
-        </div>
-    </div>
+    </section>
 </main>
 
 <script>
-    // --- SIDEBAR LOGIC ---
-    const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('toggle-sidebar');
-    const body = document.body;
+    // --- APP LOGIC ---
+    function switchPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        
+        document.getElementById('page-' + pageId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
 
-    toggleBtn.addEventListener('click', () => {
+    // --- SIDEBAR TOGGLE ---
+    const sidebar = document.getElementById('sidebar');
+    const body = document.body;
+    document.getElementById('toggle-sidebar').addEventListener('click', () => {
         sidebar.classList.toggle('collapsed');
         body.classList.toggle('collapsed-mode');
         localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
@@ -169,55 +207,81 @@
         body.classList.remove('collapsed-mode');
     }
 
-    // --- DATA FETCHING & RENDERING ---
+    // --- DASHBOARD DATA ---
     async function init() {
         try {
             const res = await fetch('/api/metrics');
             const root = await res.json();
             
             if (root.metrics && root.metrics.length > 0) {
-                const metrics = root.metrics;
-                const last = metrics[0];
+                const last = root.metrics[0];
                 
-                // Fitness Gauges
+                // 1. Fitness & Endurance (Dynamic)
                 document.getElementById('v-ctl').innerText = Math.round(last.ctl);
-                
-                // Activities Table
-                const actBody = document.getElementById('act-body');
+                const endPct = Math.min(100, Math.round(last.ctl / 1.1));
+                document.getElementById('v-end-pct').innerText = endPct + "%";
+                document.getElementById('v-end-fill').style.width = endPct + "%";
+
+                // 2. Training Status Logic
+                const trend = Math.round((last.atl / (last.ctl || 1)) * 100);
+                const status = document.getElementById('v-status');
+                const desc = document.getElementById('v-status-desc');
+                if(trend > 130) { status.innerText = "Overreaching"; status.style.color = "var(--red)"; desc.innerText = "Hati-hati, beban latihan terlalu tinggi. Kurangi volume untuk menghindari cedera."; }
+                else if(trend > 80) { status.innerText = "Optimized"; status.style.color = "var(--orange)"; desc.innerText = "Kondisi ideal. Latihanmu sangat efektif meningkatkan kebugaran persiapan 116K."; }
+                else { status.innerText = "Recovery"; status.style.color = "var(--green)"; desc.innerText = "Fase pemulihan. Tubuh sedang menyerap hasil latihan sebelumnya."; }
+
+                // 3. Recovery (Dynamic Calculation)
+                const recVal = Math.max(0, Math.min(100, 100 - Math.round(last.atl * 0.8)));
+                const hours = Math.round((100 - recVal) * 0.4);
+                document.getElementById('rec-val').innerText = recVal + "%";
+                document.getElementById('rec-desc').innerText = `${hours} hr(s) till full recovery`;
+                document.getElementById('rec-pointer').style.left = recVal + "%";
+
+                // 4. Pace Zones (Based on CTL)
+                const tPace = 253 - (last.ctl * 0.45); // detik per km
+                document.getElementById('v-target-pace').innerText = formatPace(tPace);
+                document.getElementById('zone-table').innerHTML = `
+                    <tr><td><span class="zone-p" style="background:var(--green)"></span>Aerobic Endurance</td><td style="text-align:right">${formatPace(tPace * 1.15)} - ${formatPace(tPace * 1.4)}</td></tr>
+                    <tr><td><span class="zone-p" style="background:var(--orange)"></span>Threshold Pace</td><td style="text-align:right">${formatPace(tPace * 0.95)} - ${formatPace(tPace * 1.05)}</td></tr>
+                    <tr><td><span class="zone-p" style="background:var(--red)"></span>Anaerobic Power</td><td style="text-align:right">< ${formatPace(tPace * 0.9)}</td></tr>
+                `;
+
+                // 5. Recent Activities
+                const actTable = document.getElementById('act-table');
                 root.activities.slice(0, 5).forEach(a => {
                     let icon = a.type === 'Ride' ? 'bike' : (a.type === 'WeightTraining' ? 'dumbbell' : 'run');
-                    actBody.innerHTML += `<tr>
-                        <td><i data-lucide="${icon}" size="12" style="color:var(--orange)"></i></td>
-                        <td>${new Date(a.start_date).toLocaleDateString('id-ID', {weekday:'short'})}</td>
+                    actTable.innerHTML += `<tr>
+                        <td><i data-lucide="${icon}" size="14" style="color:var(--orange)"></i></td>
                         <td>${(a.distance/1000).toFixed(1)}k</td>
-                        <td style="font-weight:bold; color:white;">${Math.round(a.training_load)}</td>
+                        <td style="text-align:right; font-weight:bold;">${Math.round(a.training_load)} TL</td>
                     </tr>`;
                 });
 
-                // Personal Records Table
-                const prTable = document.getElementById('pr-table');
-                prTable.innerHTML = `
+                // 6. Records & Predictor
+                document.getElementById('pr-table').innerHTML = `
                     <tr><td>Longest Run</td><td style="text-align:right">${(root.prs.max_dist/1000).toFixed(1)}km</td></tr>
-                    <tr><td>Elev Gain</td><td style="text-align:right">${Math.round(root.prs.max_elev)}m</td></tr>
+                    <tr><td>Max Elev</td><td style="text-align:right">${Math.round(root.prs.max_elev)}m</td></tr>
                     <tr><td>Best 10k</td><td style="text-align:right">${formatTime(root.prs.best_10k)}</td></tr>
                 `;
 
-                // Race Predictor Logic
                 const raceTable = document.getElementById('race-table');
-                const basePace = 255 - (last.ctl * 0.45);
                 const races = [{n:'5km', d:5}, {n:'10km', d:10}, {n:'Marathon', d:42.2}];
-                races.forEach(r => {
-                    raceTable.innerHTML += `<tr><td>${r.n}</td><td style="text-align:right">${formatTime(r.d * basePace)}</td></tr>`;
-                });
+                races.forEach(r => raceTable.innerHTML += `<tr><td>${r.n}</td><td style="text-align:right">${formatTime(r.d * tPace)}</td></tr>`);
 
-                renderCharts(metrics, root.weekly);
+                renderCharts(root.metrics, root.weekly);
             }
-        } catch (e) { console.error("Error loading dashboard data:", e); }
+        } catch (e) { console.error(e); }
         lucide.createIcons();
     }
 
+    function formatPace(s) {
+        const m = Math.floor(s / 60);
+        const sec = Math.round(s % 60);
+        return `${m}'${sec.toString().padStart(2,'0')}"`;
+    }
+
     function formatTime(s) {
-        if(!s) return "-";
+        if(!s) return "--:--";
         const h = Math.floor(s / 3600);
         const m = Math.floor((s % 3600) / 60);
         const sec = Math.round(s % 60);
@@ -225,7 +289,6 @@
     }
 
     function renderCharts(metrics, weekly) {
-        // PMC Line Chart
         new Chart(document.getElementById('pmcChart'), {
             type: 'line',
             data: {
@@ -238,14 +301,13 @@
             options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#21262d' } } } }
         });
 
-        // Weekly Bar Chart
         new Chart(document.getElementById('weeklyChart'), {
             type: 'bar',
             data: {
                 labels: weekly.map(w => w.day),
                 datasets: [{ data: weekly.map(w => w.dist / 1000), backgroundColor: '#00f2ff', borderRadius: 2 }]
             },
-            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+            options: { responsive: true, plugins: { legend: { display: false } } }
         });
     }
 
