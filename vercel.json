@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync-worker",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
