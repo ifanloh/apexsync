@@ -6,7 +6,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// Fungsi masak data: Mengubah lari mentah jadi CTL/ATL/TSB (Fitness/Fatigue/Form)
+// Fungsi "Masak" Data: Mengolah TSS harian menjadi grafik Fitness
 async function calculateMetrics(userId) {
   const client = await pool.connect();
   try {
@@ -18,7 +18,7 @@ async function calculateMetrics(userId) {
     let ctl = 0, atl = 0;
     for (let act of res.rows) {
       const tss = parseFloat(act.tss) || 0;
-      // Rumus standar: CTL (42 hari), ATL (7 hari)
+      // Rumus PMC: CTL (Fitness 42 hari), ATL (Fatigue 7 hari)
       ctl = ctl + (tss - ctl) / 42;
       atl = atl + (tss - atl) / 7;
       const tsb = ctl - atl;
@@ -26,7 +26,7 @@ async function calculateMetrics(userId) {
       await client.query(
         `INSERT INTO user_metrics (user_id, record_date, ctl, atl, tsb)
          VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (user_id, record_date) 
+         ON CONFLICT ON CONSTRAINT unique_user_metrics 
          DO UPDATE SET ctl = EXCLUDED.ctl, atl = EXCLUDED.atl, tsb = EXCLUDED.tsb`,
         [userId, act.start_date, ctl, atl, tsb]
       );
@@ -44,19 +44,19 @@ module.exports = async (req, res) => {
   const { url, query, method } = req;
 
   try {
-    // ENDPOINT: AMBIL DATA UNTUK GRAFIK
+    // AMBIL DATA METRICS UNTUK DASHBOARD
     if (url.includes('/api/metrics')) {
       const client = await pool.connect();
       const result = await client.query(`
         SELECT m.*, p.target_km, p.race_name, p.race_date, p.gpx_data 
         FROM user_metrics m 
-        JOIN connected_platforms p ON m.user_id = p.user_id 
-        ORDER BY m.record_date DESC LIMIT 60`);
+        LEFT JOIN connected_platforms p ON m.user_id = p.user_id 
+        ORDER BY m.record_date DESC LIMIT 100`);
       client.release();
       return res.json(result.rows);
     }
 
-    // ENDPOINT: SIMPAN STRATEGY & GPX
+    // SIMPAN STRATEGY RACE
     if (method === 'POST' && url.includes('/api/save-strategy')) {
       const { user_id, race_name, target_km, race_date, gpx_content } = req.body;
       const client = await pool.connect();
@@ -70,7 +70,7 @@ module.exports = async (req, res) => {
       return res.json({ status: "success" });
     }
 
-    // OAUTH CALLBACK STRAVA
+    // STRAVA CALLBACK HANDLER
     if (query && query.code) {
       const tokenRes = await axios.post('https://www.strava.com/oauth/token', {
         client_id: process.env.STRAVA_CLIENT_ID,
@@ -87,7 +87,6 @@ module.exports = async (req, res) => {
       });
       
       const client = await pool.connect();
-      // Pastikan user terdaftar di connected_platforms dulu
       await client.query(
         "INSERT INTO connected_platforms (user_id, platform_name) VALUES ($1, 'strava') ON CONFLICT (user_id) DO NOTHING",
         [uid]
@@ -104,7 +103,7 @@ module.exports = async (req, res) => {
       }
       client.release();
       
-      // Hitung ulang semua metrik
+      // TRIGGER HITUNG ULANG METRICS
       await calculateMetrics(uid);
       
       return res.send("<script>window.location.href='/'</script>");
