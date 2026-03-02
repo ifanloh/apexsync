@@ -12,24 +12,34 @@ module.exports = async (req, res) => {
 
   const { url, method, query } = req;
 
-  // Endpoint 1: Ambil Data Grafik Performance (PMC)
-  if (method === 'GET' && url.includes('/api/metrics')) {
+  // 1. ENDPOINT: AMBIL METRICS (CTL/ATL/TSB)
+  if (url.includes('/api/metrics')) {
     const client = await pool.connect();
     const result = await client.query("SELECT * FROM user_metrics ORDER BY record_date DESC LIMIT 30");
     client.release();
     return res.json(result.rows);
   }
 
-  // Endpoint 2: Ambil Data Heatmap Harian
-  if (method === 'GET' && url.includes('/api/heatmap')) {
+  // 2. ENDPOINT: AMBIL HEATMAP
+  if (url.includes('/api/heatmap')) {
     const client = await pool.connect();
     const result = await client.query("SELECT * FROM daily_summary WHERE day > CURRENT_DATE - INTERVAL '1 year'");
     client.release();
     return res.json(result.rows);
   }
 
-  // Endpoint 3: Handle OAuth Strava (Otomatis Sync)
-  if (method === 'GET' && query.code) {
+  // 3. LOGIKA SYNC (Pengganti Cron Job)
+  // Kamu bisa tembak ini manual atau pakai cron-job.org
+  if (url.includes('/api/sync-worker')) {
+    if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    // ... Logika tarik data Strava terbaru ...
+    return res.json({ status: "Sync Triggered" });
+  }
+
+  // 4. HANDLE OAUTH REDIRECT (STRAVA)
+  if (query.code) {
     try {
       const tokenRes = await axios.post('https://www.strava.com/oauth/token', {
         client_id: process.env.STRAVA_CLIENT_ID,
@@ -54,7 +64,9 @@ module.exports = async (req, res) => {
       }
       client.release();
       return res.send("<script>window.location.href='/'</script>");
-    } catch (e) { return res.status(500).json({ error: e.message }); }
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
   }
 
   return res.status(200).json({ status: "Apexnity Engine Active" });
