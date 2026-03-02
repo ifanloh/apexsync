@@ -2,96 +2,244 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Apexnity | 116K Commander</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apexnity | Athlete Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --bg: #0b0e14; --card: #161b22; --accent: #00f2ff; --border: #30363d; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; margin: 0; padding: 20px; }
-        .wrapper { max-width: 1200px; margin: auto; display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
-        .panel { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-        .stat-card { background: #0d1117; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-        .stat-card div { font-size: 26px; font-weight: bold; color: white; margin-top: 5px; }
-        input { width: 100%; padding: 12px; background: #0d1117; border: 1px solid var(--border); color: white; margin-top: 10px; border-radius: 6px; box-sizing: border-box; }
-        .btn-strava { display: block; text-align: center; background: #fc4c02; color: white; text-decoration: none; padding: 14px; border-radius: 6px; font-weight: bold; margin-top: 20px; }
-        .btn-save { width: 100%; margin-top: 15px; padding: 14px; background: var(--accent); border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        :root {
+            --bg-color: #0b0e14;
+            --card-bg: #161b22;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --accent-cyan: #00f2ff;
+            --accent-orange: #ff9f1c;
+            --accent-red: #ff4d4d;
+            --accent-green: #2ecc71;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 16px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Running Fitness Gauge Style */
+        .fitness-score {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .score-value {
+            font-size: 48px;
+            font-weight: 800;
+            color: white;
+        }
+
+        /* Status & Recovery Styles */
+        .status-badge {
+            color: var(--accent-orange);
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .metric-sub {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            text-align: left;
+            color: #8b949e;
+            padding-bottom: 10px;
+            font-weight: 400;
+        }
+        td {
+            padding: 8px 0;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .zone-pill {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        /* Layout Positions */
+        .span-2 { grid-column: span 2; }
+        
+        .btn-sync {
+            grid-column: span 4;
+            background: #fc4c02;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
-    <div class="wrapper">
-        <div class="main">
-            <div class="panel">
-                <h1 id="r-name" style="margin:0;">APEXNITY ACTIVE</h1>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;">
-                    <div class="stat-card"><small>CTL (Fitness)</small><div id="v-ctl">0</div></div>
-                    <div class="stat-card"><small>ATL (Fatigue)</small><div id="v-atl">0</div></div>
-                    <div class="stat-card"><small>TSB (Form)</small><div id="v-tsb">0</div></div>
-                </div>
-            </div>
-            <div class="panel">
-                <h3 style="margin-top:0">Training Trend (Last 100 Runs)</h3>
-                <div style="height:350px;"><canvas id="chart"></canvas></div>
-            </div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-title">Running Fitness ℹ️</div>
+        <div class="fitness-score">
+            <div class="score-value" id="v-ctl">88.7</div>
+            <small>Base Fitness</small>
         </div>
-        <div class="side">
-            <div class="panel">
-                <h3 style="margin-top:0">Race Strategy</h3>
-                <input type="text" id="in-name" placeholder="Race Name">
-                <input type="number" id="in-km" placeholder="Target KM">
-                <input type="date" id="in-date">
-                <button class="btn-save" onclick="save()">LOCK STRATEGY</button>
-            </div>
-            <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=activity:read_all" class="btn-strava">SYNC WITH STRAVA</a>
+        <div class="metric-sub"><span>Endurance</span><span>04'54" - 05'54"</span></div>
+        <div class="metric-sub"><span>Threshold</span><span>04'08" - 04'31"</span></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Training Status ℹ️</div>
+        <div class="status-badge">Optimized</div>
+        <p style="font-size: 12px; line-height: 1.4;">You've been training regularly... fitness levels are rapidly improving.</p>
+        <div class="metric-sub">
+            <div>Load Impact<br><b style="font-size:16px;">93</b></div>
+            <div>Base Fitness<br><b style="font-size:16px;">87</b></div>
+            <div>Intensity Trend<br><b style="font-size:16px; color:var(--accent-green);">106%</b></div>
         </div>
     </div>
 
-    <script>
-        let uId;
-        async function load() {
-            try {
-                const res = await fetch('/api/metrics');
-                const data = await res.json();
-                
-                if(data && data.length > 0) {
-                    const last = data[0];
-                    uId = last.user_id;
-                    document.getElementById('v-ctl').innerText = Math.round(last.ctl);
-                    document.getElementById('v-atl').innerText = Math.round(last.atl);
-                    document.getElementById('v-tsb').innerText = Math.round(last.tsb);
-                    renderChart(data.reverse());
-                } else {
-                    console.log("Menunggu data dari database...");
-                }
-            } catch (e) { console.error("Error loading data:", e); }
-        }
+    <div class="card">
+        <div class="card-title">7-Day Efficiency ℹ️</div>
+        <canvas id="efficiencyChart" height="150"></canvas>
+    </div>
 
-        async function save() {
-            if(!uId) { alert("Klik Sync Strava dulu biar dapet User ID!"); return; }
-            const payload = {
-                user_id: uId, race_name: document.getElementById('in-name').value,
-                target_km: document.getElementById('in-km').value, race_date: document.getElementById('in-date').value
-            };
-            await fetch('/api/save-strategy', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            location.reload();
-        }
+    <div class="card">
+        <div class="card-title">Recent Activities</div>
+        <table>
+            <thead><tr><th>Date</th><th>Volume</th><th>Intensity</th></tr></thead>
+            <tbody id="activity-list">
+                </tbody>
+        </table>
+    </div>
 
-        function renderChart(data) {
-            new Chart(document.getElementById('chart'), {
-                type: 'line',
-                data: { 
-                    labels: data.map(d => new Date(d.record_date).toLocaleDateString()), 
-                    datasets: [{ 
-                        label: 'Fitness (CTL)', 
-                        data: data.map(d => d.ctl), 
-                        borderColor: '#00f2ff', 
-                        backgroundColor: 'rgba(0, 242, 255, 0.1)',
-                        fill: true,
-                        tension: 0.3 
-                    }] 
-                },
-                options: { responsive: true, maintainAspectRatio: false }
+    <div class="card">
+        <div class="card-title">Recovery</div>
+        <div style="text-align:center; padding: 20px;">
+            <div style="font-size:40px; font-weight:bold;">80%</div>
+            <small>21 hr(s) till full recovery</small>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Weekly Activity</div>
+        <canvas id="weeklyChart" height="150"></canvas>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Threshold HR Zones</div>
+        <table>
+            <tr><td><span class="zone-pill" style="background:var(--accent-cyan)"></span>Aerobic Endur.</td><td>138 - 156</td></tr>
+            <tr><td><span class="zone-pill" style="background:var(--accent-orange)"></span>Threshold</td><td>165 - 176</td></tr>
+            <tr><td><span class="zone-pill" style="background:var(--accent-red)"></span>Anaerobic Power</td><td>> 183</td></tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Race Predictor ℹ️</div>
+        <table>
+            <tr><td>5km</td><td>00:20:06</td><td>04'01"/km</td></tr>
+            <tr><td>10km</td><td>00:41:34</td><td>04'09"/km</td></tr>
+            <tr><td>Marathon</td><td>03:13:09</td><td>04'35"/km</td></tr>
+        </table>
+    </div>
+
+    <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api/metrics&scope=activity:read_all" class="btn-sync">SYNC WITH STRAVA</a>
+</div>
+
+<script>
+    async function loadData() {
+        const res = await fetch('/api/metrics');
+        const data = await res.json();
+        
+        if(data && data.length > 0) {
+            const last = data[0];
+            document.getElementById('v-ctl').innerText = Math.round(last.ctl);
+            
+            // Populate Recent Activities
+            const list = document.getElementById('activity-list');
+            data.slice(0, 5).forEach(act => {
+                const row = `<tr>
+                    <td>${new Date(act.record_date).toLocaleDateString('id-ID', {weekday:'short'})}</td>
+                    <td>11.01km</td>
+                    <td>07'03"/km</td>
+                </tr>`;
+                list.innerHTML += row;
             });
+
+            renderEfficiencyChart();
+            renderWeeklyChart();
         }
-        load();
-    </script>
+    }
+
+    function renderEfficiencyChart() {
+        new Chart(document.getElementById('efficiencyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['T', 'W', 'T', 'F', 'S', 'S', 'M'],
+                datasets: [{
+                    data: [100, 0, 0, 0, 0, 95, 100],
+                    backgroundColor: '#2ecc71',
+                    borderRadius: 2
+                }]
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+        });
+    }
+
+    function renderWeeklyChart() {
+        new Chart(document.getElementById('weeklyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+                datasets: [{
+                    data: [5, 10, 0, 8, 12, 20, 0],
+                    backgroundColor: '#8b949e'
+                }]
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#21262d' } }, x: { grid: { display: false } } } }
+        });
+    }
+
+    loadData();
+</script>
 </body>
 </html>
