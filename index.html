@@ -1,41 +1,7 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ApexSync | Auto-Sync Platform</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; text-align: center; padding: 50px 20px; }
-        .container { max-width: 500px; margin: auto; background: #1e1e1e; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h1 { margin-bottom: 10px; color: #00ff88; }
-        p { color: #aaa; margin-bottom: 30px; }
-        .btn-group { display: flex; flex-direction: column; gap: 15px; }
-        .btn { padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; color: white; transition: 0.3s; display: block; }
-        .strava { background: #FC4C02; }
-        .suunto { background: #ff0000; }
-        .coros { background: #333333; border: 1px solid #444; }
-        .garmin { background: #007CC3; }
-        .btn:hover { opacity: 0.8; transform: translateY(-2px); }
-    </style>
-</head>
-<body>
+<div class="btn-group">
+    <a href="https://www.strava.com/oauth/authorize?client_id=ID&response_type=code&redirect_uri=https://apexsync.vercel.app/api&state=strava&scope=activity:read_all" class="btn strava">Connect Strava</a>
+    
+    <a href="https://cloud-api.suunto.com/oauth/authorize?client_id=ID&response_type=code&redirect_uri=https://apexsync.vercel.app/api&state=suunto" class="btn suunto">Connect Suunto</a>
 
-    <div class="container">
-        <h1>ApexSync 🏃‍♂️</h1>
-        <p>Hubungkan platform lari kamu untuk sinkronisasi otomatis.</p>
-
-        <div class="btn-group">
-            <a href="https://www.strava.com/oauth/authorize?client_id=GANTI_ID_STRAVA_KAMU&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=read,activity:read_all" class="btn strava">Connect with Strava</a>
-            
-            <button class="btn suunto" onclick="alert('Suunto integration coming soon!')">Connect with Suunto</button>
-            <button class="btn coros" onclick="alert('Coros integration coming soon!')">Connect with Coros</button>
-            <button class="btn garmin" onclick="alert('Garmin integration coming soon!')">Connect with Garmin</button>
-        </div>
-        
-        <div style="margin-top: 30px; font-size: 12px; color: #555;">
-            Connected to Neon Database & Vercel Edge
-        </div>
-    </div>
-
-</body>
-</html>
+    <a href="https://garmin.com/oauth/..." class="btn garmin">Connect Garmin</a>
+</div>
