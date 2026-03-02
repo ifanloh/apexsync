@@ -14,9 +14,12 @@
         .panel { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
         #race-map { height: 400px; border-radius: 8px; background: #0d1117; }
         input, textarea, select { width: 100%; background: #0d1117; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 6px; margin-top: 5px; box-sizing: border-box; }
-        .btn { background: var(--accent); color: black; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn { background: var(--accent); color: black; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
+        .btn:hover { filter: brightness(1.2); }
         .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 15px 0; }
         .stat-card { background: #0d1117; padding: 15px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+        .sidebar-sync { display: block; text-align: center; background: #fc4c02; color: white; text-decoration: none; padding: 12px; border-radius: 6px; font-weight: bold; margin-top: 20px; transition: 0.3s; }
+        .sidebar-sync:hover { filter: brightness(1.1); }
     </style>
 </head>
 <body>
@@ -28,10 +31,10 @@
             <div id="disp-timer" style="font-family:monospace; font-size:24px; color:var(--accent);">00D 00H 00M 00S</div>
             
             <div class="stat-grid">
-                <div class="stat-card"><small>CTL</small><div id="v-ctl">0</div></div>
-                <div class="stat-card"><small>ATL</small><div id="v-atl">0</div></div>
-                <div class="stat-card"><small>TSB</small><div id="v-tsb">0</div></div>
-                <div class="stat-card"><small>PROGRESS</small><div id="v-prog">0%</div></div>
+                <div class="stat-card"><small>CTL</small><div id="v-ctl" style="font-weight:bold; color:white;">0</div></div>
+                <div class="stat-card"><small>ATL</small><div id="v-atl" style="font-weight:bold; color:white;">0</div></div>
+                <div class="stat-card"><small>TSB</small><div id="v-tsb" style="font-weight:bold; color:white;">0</div></div>
+                <div class="stat-card"><small>PROGRESS</small><div id="v-prog" style="font-weight:bold; color:var(--accent);">0%</div></div>
             </div>
         </div>
 
@@ -42,26 +45,44 @@
 
         <div class="panel">
             <h3>Performance Management Chart</h3>
-            <canvas id="pmcChart" height="250"></canvas>
+            <div style="height: 250px;"><canvas id="pmcChart"></canvas></div>
         </div>
     </div>
 
     <div class="sidebar">
         <div class="panel">
-            <h3 style="color:var(--accent)">Race Strategy</h3>
-            <input type="text" id="in-name" placeholder="Race Name">
-            <div style="display:flex; gap:10px;">
-                <input type="number" id="in-km" placeholder="Distance (KM)">
-                <input type="number" id="in-elev" placeholder="Ascent (M)">
+            <h3 style="color:var(--accent); margin-top:0;">Race Strategy</h3>
+            <div style="margin-bottom:10px;">
+                <label style="font-size:11px;">Race Name</label>
+                <input type="text" id="in-name" placeholder="e.g. Rinjani 100">
             </div>
-            <input type="date" id="in-date">
-            <input type="text" id="in-finish" placeholder="Target Finish (HH:MM)">
-            <label style="font-size:12px; margin-top:10px; display:block;">GPX File</label>
-            <input type="file" id="in-file" accept=".gpx" onchange="readGPX(this)">
-            <button class="btn" style="margin-top:15px;" onclick="save()">LOCK STRATEGY</button>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <div style="flex:1;">
+                    <label style="font-size:11px;">Dist (KM)</label>
+                    <input type="number" id="in-km" placeholder="116">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:11px;">Ascent (M)</label>
+                    <input type="number" id="in-elev" placeholder="5000">
+                </div>
+            </div>
+            <div style="margin-bottom:10px;">
+                <label style="font-size:11px;">Race Date</label>
+                <input type="date" id="in-date">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label style="font-size:11px;">Target Finish</label>
+                <input type="text" id="in-finish" placeholder="HH:MM:SS">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="font-size:11px;">Upload GPX</label>
+                <input type="file" id="in-file" accept=".gpx" onchange="readGPX(this)">
+            </div>
+            <button class="btn" onclick="save()">LOCK STRATEGY</button>
         </div>
-        <a href="https://www.strava.com/oauth/authorize?client_id=GANTI_ID&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=activity:read_all" 
-           style="display:block; text-align:center; color:#fc4c02; text-decoration:none; font-weight:bold;">SYNC STRAVA</a>
+        
+        <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=activity:read_all" 
+           class="sidebar-sync">SYNC WITH STRAVA</a>
     </div>
 </div>
 
@@ -69,20 +90,22 @@
     let userId, map, gpxContent;
 
     async function load() {
-        const res = await fetch('/api/metrics');
-        const data = await res.json();
-        if(data && data.length > 0) {
-            const last = data[0];
-            userId = last.user_id;
-            document.getElementById('disp-race-name').innerText = last.race_name || "PLAN YOUR RACE";
-            document.getElementById('v-ctl').innerText = Math.round(last.ctl);
-            document.getElementById('v-atl').innerText = Math.round(last.atl);
-            document.getElementById('v-tsb').innerText = Math.round(last.tsb);
-            
-            if(last.race_date) startTimer(last.race_date);
-            if(last.gpx_data) drawMap(last.gpx_data);
-            renderChart(data.reverse());
-        }
+        try {
+            const res = await fetch('/api/metrics');
+            const data = await res.json();
+            if(data && data.length > 0) {
+                const last = data[0];
+                userId = last.user_id;
+                document.getElementById('disp-race-name').innerText = last.race_name || "PLAN YOUR RACE";
+                document.getElementById('v-ctl').innerText = Math.round(last.ctl || 0);
+                document.getElementById('v-atl').innerText = Math.round(last.atl || 0);
+                document.getElementById('v-tsb').innerText = Math.round(last.tsb || 0);
+                
+                if(last.race_date) startTimer(last.race_date);
+                if(last.gpx_data) drawMap(last.gpx_data);
+                renderChart(data.reverse());
+            }
+        } catch(e) { console.error("Load error:", e); }
     }
 
     function readGPX(input) {
@@ -93,35 +116,68 @@
 
     async function save() {
         const payload = {
-            user_id: userId, race_name: document.getElementById('in-name').value,
-            target_km: document.getElementById('in-km').value, total_ascent: document.getElementById('in-elev').value,
-            race_date: document.getElementById('in-date').value, target_finish: document.getElementById('in-finish').value,
-            gpx_content: gpxContent, target_type: "Trail"
+            user_id: userId, 
+            race_name: document.getElementById('in-name').value,
+            target_km: document.getElementById('in-km').value, 
+            total_ascent: document.getElementById('in-elev').value,
+            race_date: document.getElementById('in-date').value, 
+            target_finish: document.getElementById('in-finish').value,
+            gpx_content: gpxContent, 
+            target_type: "Trail"
         };
-        await fetch('/api/save-strategy', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-        location.reload();
+        const res = await fetch('/api/save-strategy', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(payload) 
+        });
+        if(res.ok) {
+            alert("Strategy Synchronized!");
+            location.reload();
+        }
     }
 
     function drawMap(gpx) {
         if(map) map.remove();
         map = L.map('race-map').setView([0,0], 10);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        new L.GPX(gpx, { async: true, polyline_options: {color: '#00f2ff'} }).on('loaded', e => map.fitBounds(e.target.getBounds())).addTo(map);
+        try {
+            new L.GPX(gpx, { 
+                async: true, 
+                polyline_options: {color: '#00f2ff', weight: 4} 
+            }).on('loaded', e => map.fitBounds(e.target.getBounds())).addTo(map);
+        } catch(e) { console.error("GPX Draw error:", e); }
     }
 
     function startTimer(date) {
         setInterval(() => {
             const diff = new Date(date) - new Date();
-            const d = Math.floor(diff / 864e5), h = Math.floor((diff % 864e5) / 36e5), m = Math.floor((diff % 36e5) / 6e4), s = Math.floor((diff % 6e4) / 1000);
+            if(diff < 0) return;
+            const d = Math.floor(diff / 864e5), 
+                  h = Math.floor((diff % 864e5) / 36e5), 
+                  m = Math.floor((diff % 36e5) / 6e4), 
+                  s = Math.floor((diff % 6e4) / 1000);
             document.getElementById('disp-timer').innerText = `${d}D ${h}H ${m}M ${s}S`;
         }, 1000);
     }
 
     function renderChart(data) {
-        new Chart(document.getElementById('pmcChart'), {
+        const ctx = document.getElementById('pmcChart');
+        new Chart(ctx, {
             type: 'line',
-            data: { labels: data.map(d => new Date(d.record_date).toLocaleDateString()), datasets: [{ label: 'Fitness', data: data.map(d => d.ctl), borderColor: '#00f2ff' }] },
-            options: { responsive: true, maintainAspectRatio: false }
+            data: { 
+                labels: data.map(d => new Date(d.record_date).toLocaleDateString()), 
+                datasets: [{ 
+                    label: 'CTL (Fitness)', 
+                    data: data.map(d => d.ctl), 
+                    borderColor: '#00f2ff',
+                    tension: 0.3
+                }] 
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                scales: { y: { grid: { color: '#30363d' } }, x: { grid: { display: false } } }
+            }
         });
     }
 
