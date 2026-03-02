@@ -1,61 +1,131 @@
-<div class="input-box">
-    <label>GPX Course File</label>
-    <div style="display: flex; gap: 10px; margin-top: 6px;">
-        <input type="file" id="in-gpx-file" accept=".gpx" style="display:none" onchange="handleFile(this)">
-        <button type="button" onclick="document.getElementById('in-gpx-file').click()" 
-                style="background: #21262d; color: white; border: 1px solid var(--border); padding: 10px; border-radius: 8px; cursor: pointer; flex: 1;">
-            Choose .GPX File
-        </button>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Apexnity | Race Commander</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+    <style>
+        :root { --bg: #0b0e14; --card: #161b22; --accent: #00f2ff; --border: #30363d; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; margin: 0; padding: 20px; }
+        .wrapper { max-width: 1200px; margin: auto; display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+        .panel { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        #race-map { height: 400px; border-radius: 8px; background: #0d1117; }
+        input, textarea, select { width: 100%; background: #0d1117; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 6px; margin-top: 5px; box-sizing: border-box; }
+        .btn { background: var(--accent); color: black; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; }
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 15px 0; }
+        .stat-card { background: #0d1117; padding: 15px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="main">
+        <div class="panel">
+            <h1 id="disp-race-name" style="margin:0; color:white;">APEXNITY COMMANDER</h1>
+            <div id="disp-timer" style="font-family:monospace; font-size:24px; color:var(--accent);">00D 00H 00M 00S</div>
+            
+            <div class="stat-grid">
+                <div class="stat-card"><small>CTL</small><div id="v-ctl">0</div></div>
+                <div class="stat-card"><small>ATL</small><div id="v-atl">0</div></div>
+                <div class="stat-card"><small>TSB</small><div id="v-tsb">0</div></div>
+                <div class="stat-card"><small>PROGRESS</small><div id="v-prog">0%</div></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Race Course Map</h3>
+            <div id="race-map"></div>
+        </div>
+
+        <div class="panel">
+            <h3>Performance Management Chart</h3>
+            <canvas id="pmcChart" height="250"></canvas>
+        </div>
     </div>
-    <div id="file-status" style="font-size: 11px; color: var(--accent); margin-top: 5px;"></div>
-    <textarea id="in-gpx-content" style="display:none"></textarea> 
+
+    <div class="sidebar">
+        <div class="panel">
+            <h3 style="color:var(--accent)">Race Strategy</h3>
+            <input type="text" id="in-name" placeholder="Race Name">
+            <div style="display:flex; gap:10px;">
+                <input type="number" id="in-km" placeholder="Distance (KM)">
+                <input type="number" id="in-elev" placeholder="Ascent (M)">
+            </div>
+            <input type="date" id="in-date">
+            <input type="text" id="in-finish" placeholder="Target Finish (HH:MM)">
+            <label style="font-size:12px; margin-top:10px; display:block;">GPX File</label>
+            <input type="file" id="in-file" accept=".gpx" onchange="readGPX(this)">
+            <button class="btn" style="margin-top:15px;" onclick="save()">LOCK STRATEGY</button>
+        </div>
+        <a href="https://www.strava.com/oauth/authorize?client_id=GANTI_ID&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=activity:read_all" 
+           style="display:block; text-align:center; color:#fc4c02; text-decoration:none; font-weight:bold;">SYNC STRAVA</a>
+    </div>
 </div>
 
 <script>
-    let gpxString = "";
+    let userId, map, gpxContent;
 
-    function handleFile(input) {
-        const file = input.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                gpxString = e.target.result;
-                document.getElementById('file-status').innerText = `✅ Loaded: ${file.name}`;
-                
-                // Opsional: Coba ekstrak elevasi otomatis dari GPX
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(gpxString, "text/xml");
-                const eleNodes = xmlDoc.getElementsByTagName("ele");
-                if(eleNodes.length > 0) {
-                    console.log("Elevation data found in GPX");
-                }
-            };
-            reader.readAsText(file);
+    async function load() {
+        const res = await fetch('/api/metrics');
+        const data = await res.json();
+        if(data && data.length > 0) {
+            const last = data[0];
+            userId = last.user_id;
+            document.getElementById('disp-race-name').innerText = last.race_name || "PLAN YOUR RACE";
+            document.getElementById('v-ctl').innerText = Math.round(last.ctl);
+            document.getElementById('v-atl').innerText = Math.round(last.atl);
+            document.getElementById('v-tsb').innerText = Math.round(last.tsb);
+            
+            if(last.race_date) startTimer(last.race_date);
+            if(last.gpx_data) drawMap(last.gpx_data);
+            renderChart(data.reverse());
         }
     }
 
-    async function saveStrategy() {
-        // Ambil data dari form
+    function readGPX(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => gpxContent = e.target.result;
+        reader.readAsText(input.files[0]);
+    }
+
+    async function save() {
         const payload = {
-            user_id: userId,
-            race_name: document.getElementById('in-race-name').value,
-            target_km: document.getElementById('in-km').value,
-            total_ascent: document.getElementById('in-elev').value,
-            target_finish: document.getElementById('in-finish').value,
-            race_date: document.getElementById('in-date').value,
-            gpx_content: gpxString, // Hasil bacaan file tadi
-            target_type: "Trail"
+            user_id: userId, race_name: document.getElementById('in-name').value,
+            target_km: document.getElementById('in-km').value, total_ascent: document.getElementById('in-elev').value,
+            race_date: document.getElementById('in-date').value, target_finish: document.getElementById('in-finish').value,
+            gpx_content: gpxContent, target_type: "Trail"
         };
-
-        const res = await fetch('/api/save-strategy', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-
-        if(res.ok) {
-            alert("Race Strategy & GPX Map Locked!");
-            location.reload();
-        }
+        await fetch('/api/save-strategy', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+        location.reload();
     }
+
+    function drawMap(gpx) {
+        if(map) map.remove();
+        map = L.map('race-map').setView([0,0], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        new L.GPX(gpx, { async: true, polyline_options: {color: '#00f2ff'} }).on('loaded', e => map.fitBounds(e.target.getBounds())).addTo(map);
+    }
+
+    function startTimer(date) {
+        setInterval(() => {
+            const diff = new Date(date) - new Date();
+            const d = Math.floor(diff / 864e5), h = Math.floor((diff % 864e5) / 36e5), m = Math.floor((diff % 36e5) / 6e4), s = Math.floor((diff % 6e4) / 1000);
+            document.getElementById('disp-timer').innerText = `${d}D ${h}H ${m}M ${s}S`;
+        }, 1000);
+    }
+
+    function renderChart(data) {
+        new Chart(document.getElementById('pmcChart'), {
+            type: 'line',
+            data: { labels: data.map(d => new Date(d.record_date).toLocaleDateString()), datasets: [{ label: 'Fitness', data: data.map(d => d.ctl), borderColor: '#00f2ff' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    load();
 </script>
+</body>
+</html>
