@@ -6,7 +6,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// FUNGSI MASAK DATA (CTL/ATL/TSB)
+// FUNGSI KALKULASI: Merubah data lari menjadi grafik Fitness
 async function calculateMetrics(userId) {
   const client = await pool.connect();
   try {
@@ -19,6 +19,8 @@ async function calculateMetrics(userId) {
       const tss = parseFloat(act.tss) || 0;
       ctl = ctl + (tss - ctl) / 42;
       atl = atl + (tss - atl) / 7;
+
+      // Hapus data lama di tanggal ini, baru masukkan yang baru
       await client.query("DELETE FROM user_metrics WHERE user_id = $1 AND record_date = $2", [userId, act.start_date]);
       await client.query(
         `INSERT INTO user_metrics (user_id, record_date, ctl, atl, tsb) VALUES ($1, $2, $3, $4, $5)`,
@@ -37,7 +39,7 @@ module.exports = async (req, res) => {
   const { url, query, method, body } = req;
 
   try {
-    // 1. GET METRICS (Dibuat super simpel agar data 50 itu pasti muncul)
+    // 1. GET DATA
     if (url.includes('/api/metrics')) {
       const client = await pool.connect();
       const result = await client.query(`
@@ -49,14 +51,14 @@ module.exports = async (req, res) => {
       return res.json(result.rows);
     }
 
-    // 2. SAVE STRATEGY
+    // 2. SAVE STRATEGY (Hapus dulu baru Insert)
     if (method === 'POST' && url.includes('/api/save-strategy')) {
       const { user_id, race_name, target_km, race_date, gpx_content } = body;
       const client = await pool.connect();
+      await client.query("DELETE FROM connected_platforms WHERE user_id = $1", [user_id]);
       await client.query(
-        `INSERT INTO connected_platforms (user_id, race_name, target_km, race_date, gpx_data)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (user_id) DO UPDATE SET race_name=$2, target_km=$3, race_date=$4, gpx_data=$5`,
+        `INSERT INTO connected_platforms (user_id, race_name, target_km, race_date, gpx_data, platform_name)
+         VALUES ($1, $2, $3, $4, $5, 'strava')`,
         [user_id, race_name, target_km, race_date, gpx_content]
       );
       client.release();
@@ -76,11 +78,21 @@ module.exports = async (req, res) => {
       const actRes = await axios.get('https://www.strava.com/api/v3/athlete/activities?per_page=100', {
         headers: { 'Authorization': `Bearer ${access_token}` }
       });
+
       const client = await pool.connect();
-      await client.query("INSERT INTO connected_platforms (user_id, platform_name) VALUES ($1, 'strava') ON CONFLICT (user_id) DO NOTHING", [uid]);
+      // Update User Platform (Manual Upsert)
+      const check = await client.query("SELECT id FROM connected_platforms WHERE user_id = $1", [uid]);
+      if (check.rows.length > 0) {
+        await client.query("UPDATE connected_platforms SET access_token = $1 WHERE user_id = $2", [access_token, uid]);
+      } else {
+        await client.query("INSERT INTO connected_platforms (user_id, platform_name, access_token) VALUES ($1, 'strava', $2)", [uid, access_token]);
+      }
+
       for (const act of actRes.data) {
         const isTrail = act.total_elevation_gain > (act.distance / 1000) * 10;
         const tss = (act.moving_time / 3600) * (isTrail ? 0.95 : 0.85) * 100;
+        
+        // Hapus aktivitas lama, masukkan yang baru (Manual Upsert)
         await client.query("DELETE FROM activities WHERE activity_id = $1", [act.id.toString()]);
         await client.query(
           `INSERT INTO activities (user_id, activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date, type)
