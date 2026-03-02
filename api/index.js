@@ -6,7 +6,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// Fungsi masak data: Mengubah lari mentah jadi CTL/ATL/TSB
+// Fungsi untuk menghitung angka Fitness (CTL/ATL/TSB)
 async function calculateMetrics(userId) {
   const client = await pool.connect();
   try {
@@ -16,11 +16,8 @@ async function calculateMetrics(userId) {
     );
     
     let ctl = 0, atl = 0;
-    const activities = res.rows;
-
-    for (let act of activities) {
+    for (let act of res.rows) {
       const tss = parseFloat(act.tss) || 0;
-      // Rumus TrainingPeaks: CTL (42 hari), ATL (7 hari)
       ctl = ctl + (tss - ctl) / 42;
       atl = atl + (tss - atl) / 7;
       const tsb = ctl - atl;
@@ -28,7 +25,8 @@ async function calculateMetrics(userId) {
       await client.query(
         `INSERT INTO user_metrics (user_id, record_date, ctl, atl, tsb)
          VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (user_id, record_date) DO UPDATE SET ctl=$3, atl=$4, tsb=$5`,
+         ON CONFLICT (user_id, record_date) 
+         DO UPDATE SET ctl = EXCLUDED.ctl, atl = EXCLUDED.atl, tsb = EXCLUDED.tsb`,
         [userId, act.start_date, ctl, atl, tsb]
       );
     }
@@ -39,12 +37,23 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { url, query, method } = req;
 
   try {
+    // GET METRICS (Ambil data dari tabel beneran)
+    if (url.includes('/api/metrics')) {
+      const client = await pool.connect();
+      const result = await client.query(`
+        SELECT m.*, p.target_km, p.target_type, p.race_date, p.race_name, p.target_finish_time, p.gpx_data, p.total_elevation_target 
+        FROM user_metrics m 
+        JOIN connected_platforms p ON m.user_id = p.user_id 
+        ORDER BY m.record_date DESC LIMIT 60`);
+      client.release();
+      return res.json(result.rows);
+    }
+
     // SAVE STRATEGY
     if (method === 'POST' && url.includes('/api/save-strategy')) {
       const { user_id, race_name, target_km, target_type, race_date, target_finish, gpx_content, total_ascent } = req.body;
@@ -56,17 +65,6 @@ module.exports = async (req, res) => {
       );
       client.release();
       return res.json({ status: "success" });
-    }
-
-    // GET METRICS
-    if (url.includes('/api/metrics')) {
-      const client = await pool.connect();
-      const result = await client.query(`
-        SELECT m.*, p.target_km, p.target_type, p.race_date, p.race_name, p.target_finish_time, p.gpx_data, p.total_elevation_target 
-        FROM user_metrics m JOIN connected_platforms p ON m.user_id = p.user_id 
-        ORDER BY record_date DESC LIMIT 60`);
-      client.release();
-      return res.json(result.rows);
     }
 
     // STRAVA CALLBACK
@@ -85,7 +83,6 @@ module.exports = async (req, res) => {
       const client = await pool.connect();
       const uid = athlete.id.toString();
 
-      // Pastikan user terdaftar di connected_platforms
       await client.query(
         "INSERT INTO connected_platforms (user_id, platform_name) VALUES ($1, 'strava') ON CONFLICT (user_id) DO NOTHING",
         [uid]
@@ -101,10 +98,7 @@ module.exports = async (req, res) => {
         );
       }
       client.release();
-      
-      // JALANKAN KALKULASI SETELAH SYNC
       await calculateMetrics(uid);
-      
       return res.send("<script>window.location.href='/'</script>");
     }
 
