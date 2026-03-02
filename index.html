@@ -1,160 +1,42 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Apexnity | Race Commander</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root { --bg: #0b0e14; --card: #161b22; --accent: #00f2ff; --border: #30363d; --text-dim: #8b949e; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; margin: 0; padding: 20px; }
-        .wrapper { max-width: 1100px; margin: auto; display: grid; grid-template-columns: 1fr 350px; gap: 25px; }
-        .panel { background: var(--card); border: 1px solid var(--border); padding: 25px; border-radius: 16px; }
-        .race-header { border-left: 4px solid var(--accent); padding-left: 20px; margin-bottom: 30px; }
-        .race-name { font-size: 32px; font-weight: 900; color: white; margin: 0; }
-        .countdown { font-family: 'Courier New', monospace; font-size: 24px; color: var(--accent); margin-top: 10px; }
-        
-        .input-box { margin-bottom: 15px; }
-        label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; font-weight: bold; }
-        input, textarea, select { width: 100%; background: #0d1117; border: 1px solid var(--border); color: white; padding: 12px; border-radius: 8px; margin-top: 6px; box-sizing: border-box; }
-        .btn-save { background: var(--accent); color: black; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: 800; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-        .btn-save:hover { filter: brightness(1.2); transform: translateY(-2px); }
-        
-        .stats-summary { display: flex; gap: 20px; margin-top: 15px; }
-        .stat-item { flex: 1; background: #0d1117; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
-    </style>
-</head>
-<body>
-
-<div class="wrapper">
-    <div class="main-panel">
-        <div class="race-header">
-            <h1 class="race-name" id="disp-race-name">PROJECT: UNKNOWN RACE</h1>
-            <div class="countdown" id="disp-timer">00D 00H 00M 00S</div>
-        </div>
-
-        <div class="stats-summary">
-            <div class="stat-item"><small>DISTANCE</small><div id="disp-km" style="font-size:20px; font-weight:bold;">--</div></div>
-            <div class="stat-item"><small>TARGET FINISH</small><div id="disp-finish" style="font-size:20px; font-weight:bold;">--</div></div>
-            <div class="stat-item"><small>TOTAL ASCENT</small><div id="disp-elev" style="font-size:20px; font-weight:bold;">--</div></div>
-        </div>
-
-        <div class="panel" style="margin-top:25px;">
-            <h3>Performance Management Chart</h3>
-            <div style="height: 300px;"><canvas id="pmcChart"></canvas></div>
-        </div>
+<div class="panel" style="margin-top:25px;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>Weekly Training Plan</h3>
+        <button onclick="generatePlan()" style="padding:5px 10px; font-size:11px; cursor:pointer;">Regenerate Plan</button>
     </div>
-
-    <div class="panel">
-        <h2 style="margin-top:0; color:var(--accent);">Race Strategy</h2>
-        <div class="input-box">
-            <label>Race Name</label>
-            <input type="text" id="in-race-name" placeholder="e.g. UTMB Mont-Blanc">
+    <div id="plan-container" style="display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; margin-top:10px;">
         </div>
-        <div style="display:flex; gap:10px;">
-            <div class="input-box">
-                <label>Distance (KM)</label>
-                <input type="number" id="in-km">
-            </div>
-            <div class="input-box">
-                <label>Ascent (M)</label>
-                <input type="number" id="in-elev">
-            </div>
-        </div>
-        <div class="input-box">
-            <label>Target Finish Time</label>
-            <input type="text" id="in-finish" placeholder="HH:MM:SS">
-        </div>
-        <div class="input-box">
-            <label>GPX Data / Route URL</label>
-            <textarea id="in-gpx" rows="3" placeholder="Paste GPX info here..."></textarea>
-        </div>
-        <div class="input-box">
-            <label>Race Date</label>
-            <input type="date" id="in-date">
-        </div>
-        <button class="btn-save" onclick="saveStrategy()">LOCK STRATEGY</button>
-    </div>
 </div>
 
 <script>
-    let userId = "";
-
-    async function loadCommander() {
-        const res = await fetch('/api/metrics');
+    async function getPlan() {
+        const res = await fetch(`/api/get-plan?user_id=${userId}`);
         const data = await res.json();
-        if(data && data.length > 0) {
-            const last = data[0];
-            userId = last.user_id;
-
-            // UI Display
-            document.getElementById('disp-race-name').innerText = last.race_name || "PLAN YOUR RACE";
-            document.getElementById('disp-km').innerText = (last.target_km || 0) + " KM";
-            document.getElementById('disp-finish').innerText = last.target_finish_time || "--:--";
-            document.getElementById('disp-elev').innerText = (last.total_elevation_target || 0) + " M";
-
-            // Form Fill
-            document.getElementById('in-race-name').value = last.race_name || "";
-            document.getElementById('in-km').value = last.target_km || "";
-            document.getElementById('in-elev').value = last.total_elevation_target || "";
-            document.getElementById('in-finish').value = last.target_finish_time || "";
-            document.getElementById('in-date').value = last.race_date ? last.race_date.split('T')[0] : "";
-
-            if(last.race_date) startCountdown(last.race_date);
-            renderPMC(data.reverse());
-        }
+        if(data.plan_json) renderPlan(data.plan_json);
     }
 
-    async function saveStrategy() {
-        const payload = {
-            user_id: userId,
-            race_name: document.getElementById('in-race-name').value,
-            target_km: document.getElementById('in-km').value,
-            total_ascent: document.getElementById('in-elev').value,
-            target_finish: document.getElementById('in-finish').value,
-            race_date: document.getElementById('in-date').value,
-            gpx_data: document.getElementById('in-gpx').value,
-            target_type: "Trail"
-        };
+    function renderPlan(plan) {
+        const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+        document.getElementById('plan-container').innerHTML = days.map(day => `
+            <div style="background:#0d1117; padding:10px; border-radius:8px; border:1px solid #30363d; text-align:center;">
+                <div style="font-size:10px; color:#8b949e; text-transform:uppercase;">${day}</div>
+                <div style="font-size:12px; font-weight:bold; margin-top:5px; color:var(--accent);">${plan[day]}</div>
+            </div>
+        `).join('');
+    }
 
-        const res = await fetch('/api/save-strategy', {
+    async function generatePlan() {
+        const res = await fetch('/api/generate-plan', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ 
+                user_id: userId, 
+                target_km: document.getElementById('in-km').value,
+                target_type: "Trail" 
+            })
         });
-
-        if(res.ok) {
-            alert("Strategy Synchronized!");
-            location.reload();
-        }
+        const data = await res.json();
+        renderPlan(data.plan);
     }
 
-    function startCountdown(date) {
-        const target = new Date(date).getTime();
-        setInterval(() => {
-            const now = new Date().getTime();
-            const diff = target - now;
-            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const s = Math.floor((diff % (1000 * 60)) / 1000);
-            document.getElementById('disp-timer').innerText = 
-                `${String(d).padStart(2, '0')}D ${String(h).padStart(2, '0')}H ${String(m).padStart(2, '0')}M ${String(s).padStart(2, '0')}S`;
-        }, 1000);
-    }
-
-    function renderPMC(data) {
-        const ctx = document.getElementById('pmcChart');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.map(d => new Date(d.record_date).toLocaleDateString()),
-                datasets: [{ label: 'CTL (Fitness)', data: data.map(d => d.ctl), borderColor: '#00f2ff', tension: 0.3 }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    }
-
-    loadCommander();
+    // Panggil getPlan() di dalam function loadCommander()
 </script>
-</body>
-</html>
