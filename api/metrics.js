@@ -10,7 +10,62 @@ if (!global._pool) {
 }
 const pool = global._pool;
 
-// --------- METRICS CALCULATION ----------
+/**
+ * COROS-like: HR-based training load
+ * We approximate using Bannister TRIMP-like model.
+ *
+ * Inputs:
+ * - moving_time_s
+ * - avg_hr
+ * - hr_rest, hr_max (estimated if not available)
+ *
+ * Output:
+ * - load score (store into activities.tss)
+ */
+function estimateHrRestMaxFallback({ avgHr, maxHr }) {
+  // Reasonable fallbacks if user settings are absent
+  const hrRest = 55; // typical; COROS uses resting HR baseline
+  let hrMax = 190;
+
+  if (Number.isFinite(maxHr) && maxHr > 120) hrMax = maxHr;
+  else if (Number.isFinite(avgHr) && avgHr > 120) hrMax = Math.max(180, Math.min(205, avgHr + 35));
+
+  return { hrRest, hrMax };
+}
+
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
+}
+
+function calcHrLoadTRIMP(movingTimeS, avgHr, hrRest, hrMax) {
+  const durMin = (Number(movingTimeS) || 0) / 60;
+  const aHr = Number(avgHr);
+
+  if (!Number.isFinite(durMin) || durMin <= 0) return 0;
+  if (!Number.isFinite(aHr) || aHr <= 0) {
+    // No HR data -> degrade to duration-only low fidelity
+    // (still better than nothing, but will differ vs COROS)
+    return durMin * 1.0;
+  }
+
+  const denom = (hrMax - hrRest);
+  if (!Number.isFinite(denom) || denom <= 10) return durMin * 1.0;
+
+  // HR reserve ratio
+  const hrr = clamp((aHr - hrRest) / denom, 0, 1);
+
+  // Bannister TRIMP (male constants). COROS is proprietary; this approximates the curve.
+  // TRIMP = duration_min * hrr * 0.64 * exp(1.92*hrr)
+  const trimp = durMin * hrr * 0.64 * Math.exp(1.92 * hrr);
+
+  // Scale to a "load score" similar magnitude to COROS TL:
+  // COROS TL often lands ~30-200 per session depending intensity/duration.
+  // This factor calibrates typical runs into similar range.
+  const scaled = trimp * 10;
+
+  return Math.round(scaled * 10) / 10;
+}
+
 async function calculateMetrics(client, userId) {
   const res = await client.query(
     `SELECT tss, start_date
@@ -24,9 +79,10 @@ async function calculateMetrics(client, userId) {
   let atl = 0;
 
   for (const act of res.rows) {
-    const tss = Number(act.tss) || 0;
-    ctl = ctl + (tss - ctl) / 42;
-    atl = atl + (tss - atl) / 7;
+    const load = Number(act.tss) || 0;
+
+    ctl = ctl + (load - ctl) / 42;
+    atl = atl + (load - atl) / 7;
 
     await client.query(
       `INSERT INTO user_metrics (user_id, record_date, ctl, atl, tsb)
@@ -38,7 +94,43 @@ async function calculateMetrics(client, userId) {
   }
 }
 
-// --------- HELPER: resolve default user_id ----------
+async function upsertDailySummaryFromActivities(client, userId) {
+  // aggregate by day
+  await client.query(
+    `INSERT INTO daily_summary (user_id, day, distance_m, moving_time_s, elev_m, tss, activity_count)
+     SELECT
+       user_id,
+       DATE(start_date) AS day,
+       COALESCE(SUM(distance),0) AS distance_m,
+       COALESCE(SUM(moving_time),0) AS moving_time_s,
+       COALESCE(SUM(total_elevation_gain),0) AS elev_m,
+       COALESCE(SUM(tss),0) AS tss,
+       COUNT(*) AS activity_count
+     FROM activities
+     WHERE user_id = $1
+     GROUP BY user_id, DATE(start_date)
+     ON CONFLICT (user_id, day)
+     DO UPDATE SET
+       distance_m = EXCLUDED.distance_m,
+       moving_time_s = EXCLUDED.moving_time_s,
+       elev_m = EXCLUDED.elev_m,
+       tss = EXCLUDED.tss,
+       activity_count = EXCLUDED.activity_count`,
+    [userId]
+  );
+
+  // bring ctl/atl/tsb into daily_summary
+  await client.query(
+    `UPDATE daily_summary d
+     SET ctl = m.ctl, atl = m.atl, tsb = m.tsb
+     FROM user_metrics m
+     WHERE d.user_id = m.user_id
+       AND d.day = DATE(m.record_date)
+       AND d.user_id = $1`,
+    [userId]
+  );
+}
+
 async function resolveDefaultUserId(client) {
   const cp = await client.query(
     `SELECT user_id
@@ -59,7 +151,6 @@ async function resolveDefaultUserId(client) {
   return null;
 }
 
-// --------- HANDLER ----------
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -71,9 +162,7 @@ module.exports = async (req, res) => {
   let body = req.body;
   try {
     if (typeof body === "string") body = JSON.parse(body);
-  } catch {
-    // ignore
-  }
+  } catch {}
 
   // ========= STRAVA CALLBACK =========
   if (req.query?.code) {
@@ -106,13 +195,22 @@ module.exports = async (req, res) => {
       );
 
       for (const act of actRes.data) {
-        // Placeholder TSS (improve later)
-        const tss = (act.moving_time / 3600) * 85;
+        const movingTime = act.moving_time || 0;
+        const avgHr = act.average_heartrate ?? null;
+        const maxHr = act.max_heartrate ?? null;
+
+        const { hrRest, hrMax } = estimateHrRestMaxFallback({
+          avgHr: Number(avgHr),
+          maxHr: Number(maxHr),
+        });
+
+        // COROS-like load score
+        const load = calcHrLoadTRIMP(movingTime, avgHr, hrRest, hrMax);
 
         await client.query(
           `INSERT INTO activities
-           (user_id, activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date, type, updated_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
+           (user_id, activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date, type, avg_hr, max_hr, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now())
            ON CONFLICT (activity_id)
            DO UPDATE SET
              user_id=$1,
@@ -123,23 +221,28 @@ module.exports = async (req, res) => {
              tss=$7,
              start_date=$8,
              type=$9,
+             avg_hr=$10,
+             max_hr=$11,
              updated_at=now()`,
           [
             uid,
             act.id.toString(),
             act.name,
             act.distance,
-            act.moving_time,
+            movingTime,
             act.total_elevation_gain,
-            tss,
+            load,
             act.start_date,
             act.type,
+            avgHr,
+            maxHr,
           ]
         );
       }
 
-      // Rebuild metrics after sync
+      // Rebuild metrics & daily summary
       await calculateMetrics(client, uid);
+      await upsertDailySummaryFromActivities(client, uid);
 
       return res.redirect("/");
     } catch (e) {
@@ -149,45 +252,18 @@ module.exports = async (req, res) => {
     }
   }
 
-  // ========= POST: update race target =========
-  if (req.method === "POST") {
-    const client = await pool.connect();
-    try {
-      const { user_id, race_name, target_km, race_date } = body || {};
-      if (!user_id) return res.status(400).json({ error: "user_id required" });
-
-      await client.query(
-        `UPDATE connected_platforms
-         SET race_name=$1,
-             target_km=$2,
-             race_date=$3,
-             updated_at=now()
-         WHERE user_id=$4`,
-        [race_name || null, target_km || null, race_date || null, user_id]
-      );
-
-      return res.json({ status: "success" });
-    } catch (e) {
-      return res.status(500).json({ error: e.message });
-    } finally {
-      client.release();
-    }
-  }
-
-  // ========= GET: dashboard payload =========
+  // ========= DATA REQUEST (legacy) =========
   const client = await pool.connect();
   try {
     let userId = req.query?.user_id;
     if (!userId) userId = await resolveDefaultUserId(client);
 
     if (!userId) {
-      // No data at all yet
       return res.json({ metrics: [], weekly: [], prs: {}, activities: [] });
     }
 
-    // 1) Recent activities (needed by index.html)
     const activities = await client.query(
-      `SELECT activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date, type
+      `SELECT activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date, type, avg_hr, max_hr
        FROM activities
        WHERE user_id=$1
        ORDER BY start_date DESC
@@ -195,8 +271,7 @@ module.exports = async (req, res) => {
       [userId]
     );
 
-    // 2) Metrics
-    let metrics = await client.query(
+    const metrics = await client.query(
       `SELECT m.*, p.display_name, p.race_name, p.target_km, p.race_date
        FROM user_metrics m
        LEFT JOIN connected_platforms p ON m.user_id=p.user_id
@@ -206,21 +281,6 @@ module.exports = async (req, res) => {
       [userId]
     );
 
-    // AUTO-FIX: if metrics empty but activities exist -> compute once
-    if (metrics.rows.length === 0 && activities.rows.length > 0) {
-      await calculateMetrics(client, userId);
-      metrics = await client.query(
-        `SELECT m.*, p.display_name, p.race_name, p.target_km, p.race_date
-         FROM user_metrics m
-         LEFT JOIN connected_platforms p ON m.user_id=p.user_id
-         WHERE m.user_id=$1
-         ORDER BY m.record_date DESC
-         LIMIT 120`,
-        [userId]
-      );
-    }
-
-    // 3) Weekly volume
     const weekly = await client.query(
       `SELECT
          to_char(start_date,'Dy') as day,
@@ -233,12 +293,10 @@ module.exports = async (req, res) => {
       [userId]
     );
 
-    // 4) PRs
     const prs = await client.query(
       `SELECT
         MAX(distance) as max_dist,
-        MAX(total_elevation_gain) as max_elev,
-        MIN(CASE WHEN distance BETWEEN 9500 AND 10500 THEN moving_time END) as best_10k
+        MAX(total_elevation_gain) as max_elev
        FROM activities
        WHERE user_id=$1`,
       [userId]
@@ -248,7 +306,18 @@ module.exports = async (req, res) => {
       metrics: metrics.rows,
       weekly: weekly.rows,
       prs: prs.rows[0] || {},
-      activities: activities.rows,
+      activities: activities.rows.map((a) => ({
+        activity_id: a.activity_id,
+        title: a.title,
+        type: a.type,
+        distance_m: Number(a.distance) || 0,
+        moving_time_s: Number(a.moving_time) || 0,
+        elev_m: Number(a.total_elevation_gain) || 0,
+        tss: Number(a.tss) || 0,
+        avg_hr: a.avg_hr == null ? null : Number(a.avg_hr),
+        max_hr: a.max_hr == null ? null : Number(a.max_hr),
+        date: a.start_date ? new Date(a.start_date).toISOString() : null,
+      })),
     });
   } catch (e) {
     return res.status(500).json({ error: e.message });
