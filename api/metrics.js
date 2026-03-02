@@ -1,54 +1,45 @@
 const { Pool } = require("pg");
 const axios = require("axios");
 
-// IMPORTANT: reuse pool in serverless
-let pool;
-
+// Reuse pool across serverless invocations
 if (!global._pool) {
   global._pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
   });
 }
-pool = global._pool;
+const pool = global._pool;
 
 // --------- METRICS CALCULATION ----------
-async function calculateMetrics(userId) {
-  const client = await pool.connect();
-  try {
-    const res = await client.query(
-      `SELECT tss, start_date
-       FROM activities
-       WHERE user_id = $1
-       ORDER BY start_date ASC`,
-      [userId]
+async function calculateMetrics(client, userId) {
+  const res = await client.query(
+    `SELECT tss, start_date
+     FROM activities
+     WHERE user_id = $1
+     ORDER BY start_date ASC`,
+    [userId]
+  );
+
+  let ctl = 0;
+  let atl = 0;
+
+  for (const act of res.rows) {
+    const tss = Number(act.tss) || 0;
+    ctl = ctl + (tss - ctl) / 42;
+    atl = atl + (tss - atl) / 7;
+
+    await client.query(
+      `INSERT INTO user_metrics (user_id, record_date, ctl, atl, tsb)
+       VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (user_id, record_date)
+       DO UPDATE SET ctl=$3, atl=$4, tsb=$5`,
+      [userId, act.start_date, ctl, atl, ctl - atl]
     );
-
-    let ctl = 0;
-    let atl = 0;
-
-    for (const act of res.rows) {
-      const tss = Number(act.tss) || 0;
-
-      ctl = ctl + (tss - ctl) / 42;
-      atl = atl + (tss - atl) / 7;
-
-      await client.query(
-        `INSERT INTO user_metrics (user_id, record_date, ctl, atl, tsb)
-         VALUES ($1,$2,$3,$4,$5)
-         ON CONFLICT (user_id, record_date)
-         DO UPDATE SET ctl=$3, atl=$4, tsb=$5`,
-        [userId, act.start_date, ctl, atl, ctl - atl]
-      );
-    }
-  } finally {
-    client.release();
   }
 }
 
-// --------- HELPER: resolve default user_id for single-user dashboard ----------
+// --------- HELPER: resolve default user_id ----------
 async function resolveDefaultUserId(client) {
-  // 1) Try connected_platforms (latest updated)
   const cp = await client.query(
     `SELECT user_id
      FROM connected_platforms
@@ -57,14 +48,13 @@ async function resolveDefaultUserId(client) {
   );
   if (cp.rows?.[0]?.user_id) return cp.rows[0].user_id;
 
-  // 2) Fallback: latest metrics
-  const um = await client.query(
+  const a = await client.query(
     `SELECT user_id
-     FROM user_metrics
-     ORDER BY record_date DESC
+     FROM activities
+     ORDER BY start_date DESC
      LIMIT 1`
   );
-  if (um.rows?.[0]?.user_id) return um.rows[0].user_id;
+  if (a.rows?.[0]?.user_id) return a.rows[0].user_id;
 
   return null;
 }
@@ -75,22 +65,19 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
 
-  // parse body safely (vercel sometimes no auto parse)
+  // Safe body parse
   let body = req.body;
   try {
     if (typeof body === "string") body = JSON.parse(body);
   } catch {
-    // ignore parse error; body stays raw
+    // ignore
   }
 
   // ========= STRAVA CALLBACK =========
   if (req.query?.code) {
     let client;
-
     try {
       const tokenRes = await axios.post("https://www.strava.com/oauth/token", {
         client_id: process.env.STRAVA_CLIENT_ID,
@@ -105,7 +92,6 @@ module.exports = async (req, res) => {
 
       client = await pool.connect();
 
-      // ensure we keep 1 row per user_id
       await client.query(
         `INSERT INTO connected_platforms (user_id, platform_name, display_name, updated_at)
          VALUES ($1,'strava',$2, now())
@@ -120,7 +106,7 @@ module.exports = async (req, res) => {
       );
 
       for (const act of actRes.data) {
-        // NOTE: placeholder TSS. You can replace with a real model later.
+        // Placeholder TSS (improve later)
         const tss = (act.moving_time / 3600) * 85;
 
         await client.query(
@@ -152,9 +138,9 @@ module.exports = async (req, res) => {
         );
       }
 
-      await calculateMetrics(uid);
+      // Rebuild metrics after sync
+      await calculateMetrics(client, uid);
 
-      // redirect back to dashboard
       return res.redirect("/");
     } catch (e) {
       return res.status(500).json({ error: e.message });
@@ -163,18 +149,12 @@ module.exports = async (req, res) => {
     }
   }
 
-  // ========= DATA REQUEST =========
-  try {
+  // ========= POST: update race target =========
+  if (req.method === "POST") {
     const client = await pool.connect();
-
-    // POST (race target update)
-    if (req.method === "POST") {
+    try {
       const { user_id, race_name, target_km, race_date } = body || {};
-
-      if (!user_id) {
-        client.release();
-        return res.status(400).json({ error: "user_id required for POST" });
-      }
+      if (!user_id) return res.status(400).json({ error: "user_id required" });
 
       await client.query(
         `UPDATE connected_platforms
@@ -186,32 +166,61 @@ module.exports = async (req, res) => {
         [race_name || null, target_km || null, race_date || null, user_id]
       );
 
-      client.release();
       return res.json({ status: "success" });
-    }
-
-    // GET: if user_id missing, auto pick last synced user (single-user UX)
-    let userId = req.query?.user_id;
-    if (!userId) {
-      userId = await resolveDefaultUserId(client);
-    }
-
-    if (!userId) {
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    } finally {
       client.release();
-      // no data yet -> show empty payload (dashboard can stay 0 but not error)
-      return res.json({ metrics: [], weekly: [], prs: {} });
+    }
+  }
+
+  // ========= GET: dashboard payload =========
+  const client = await pool.connect();
+  try {
+    let userId = req.query?.user_id;
+    if (!userId) userId = await resolveDefaultUserId(client);
+
+    if (!userId) {
+      // No data at all yet
+      return res.json({ metrics: [], weekly: [], prs: {}, activities: [] });
     }
 
-    const metrics = await client.query(
+    // 1) Recent activities (needed by index.html)
+    const activities = await client.query(
+      `SELECT activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date, type
+       FROM activities
+       WHERE user_id=$1
+       ORDER BY start_date DESC
+       LIMIT 20`,
+      [userId]
+    );
+
+    // 2) Metrics
+    let metrics = await client.query(
       `SELECT m.*, p.display_name, p.race_name, p.target_km, p.race_date
        FROM user_metrics m
        LEFT JOIN connected_platforms p ON m.user_id=p.user_id
        WHERE m.user_id=$1
        ORDER BY m.record_date DESC
-       LIMIT 100`,
+       LIMIT 120`,
       [userId]
     );
 
+    // AUTO-FIX: if metrics empty but activities exist -> compute once
+    if (metrics.rows.length === 0 && activities.rows.length > 0) {
+      await calculateMetrics(client, userId);
+      metrics = await client.query(
+        `SELECT m.*, p.display_name, p.race_name, p.target_km, p.race_date
+         FROM user_metrics m
+         LEFT JOIN connected_platforms p ON m.user_id=p.user_id
+         WHERE m.user_id=$1
+         ORDER BY m.record_date DESC
+         LIMIT 120`,
+        [userId]
+      );
+    }
+
+    // 3) Weekly volume
     const weekly = await client.query(
       `SELECT
          to_char(start_date,'Dy') as day,
@@ -224,6 +233,7 @@ module.exports = async (req, res) => {
       [userId]
     );
 
+    // 4) PRs
     const prs = await client.query(
       `SELECT
         MAX(distance) as max_dist,
@@ -234,14 +244,15 @@ module.exports = async (req, res) => {
       [userId]
     );
 
-    client.release();
-
     return res.json({
       metrics: metrics.rows,
       weekly: weekly.rows,
       prs: prs.rows[0] || {},
+      activities: activities.rows,
     });
   } catch (e) {
     return res.status(500).json({ error: e.message });
+  } finally {
+    client.release();
   }
 };
