@@ -12,7 +12,7 @@ module.exports = async (req, res) => {
 
   const { url, method, query } = req;
 
-  // Endpoint 1: Ambil Data Grafik Performance Management Chart (PMC)
+  // Endpoint 1: Ambil Data Grafik Performance (PMC)
   if (method === 'GET' && url.includes('/api/metrics')) {
     const client = await pool.connect();
     const result = await client.query("SELECT * FROM user_metrics ORDER BY record_date DESC LIMIT 30");
@@ -20,7 +20,15 @@ module.exports = async (req, res) => {
     return res.json(result.rows);
   }
 
-  // Endpoint 2: Handle OAuth Strava
+  // Endpoint 2: Ambil Data Heatmap Harian
+  if (method === 'GET' && url.includes('/api/heatmap')) {
+    const client = await pool.connect();
+    const result = await client.query("SELECT * FROM daily_summary WHERE day > CURRENT_DATE - INTERVAL '1 year'");
+    client.release();
+    return res.json(result.rows);
+  }
+
+  // Endpoint 3: Handle OAuth Strava (Otomatis Sync)
   if (method === 'GET' && query.code) {
     try {
       const tokenRes = await axios.post('https://www.strava.com/oauth/token', {
@@ -31,16 +39,13 @@ module.exports = async (req, res) => {
       });
 
       const { access_token, athlete } = tokenRes.data;
-      const actRes = await axios.get('https://www.strava.com/api/v3/athlete/activities?per_page=10', {
+      const actRes = await axios.get('https://www.strava.com/api/v3/athlete/activities?per_page=30', {
         headers: { 'Authorization': `Bearer ${access_token}` }
       });
 
       const client = await pool.connect();
       for (const act of actRes.data) {
-        // Rumus TSS Sederhana: (Moving Time / 3600) * (Intensity Factor^2) * 100
-        // Sementara kita pakai konstanta intensitas 85% untuk ultra trail
         const tss = (act.moving_time / 3600) * 0.85 * 100;
-
         await client.query(
           `INSERT INTO activities (user_id, activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (activity_id) DO NOTHING`,
@@ -52,5 +57,5 @@ module.exports = async (req, res) => {
     } catch (e) { return res.status(500).json({ error: e.message }); }
   }
 
-  return res.status(200).json({ status: "Apexnity Engine Running" });
+  return res.status(200).json({ status: "Apexnity Engine Active" });
 };
