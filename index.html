@@ -1,131 +1,51 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apexnity | Ultra-Trail Analytics</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root { --bg: #0d1117; --card: #161b22; --accent: #00f2ff; --text: #c9d1d9; --border: #30363d; --strava: #fc4c02; }
-        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; line-height: 1.6; }
-        .container { max-width: 1000px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
-        .brand { font-size: 26px; font-weight: 900; color: var(--accent); letter-spacing: -1px; }
-        
-        /* Stats Grid */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 25px; }
-        .card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
-        .card h3 { margin: 0; font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; }
-        .card .value { font-size: 28px; font-weight: bold; margin-top: 8px; color: white; }
-
-        /* Progress Bar */
-        .target-box { background: var(--card); padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid var(--border); }
-        .progress-bg { background: #21262d; height: 12px; border-radius: 6px; margin-top: 10px; overflow: hidden; }
-        .progress-fill { background: linear-gradient(90deg, #00f2ff, #00ff88); height: 100%; width: 0%; transition: 1s ease-in-out; }
-
-        /* Chart & Heatmap */
-        .main-chart { background: var(--card); padding: 25px; border-radius: 12px; margin-top: 20px; border: 1px solid var(--border); height: 350px; }
-        
-        /* List Activity */
-        .activity-list { margin-top: 25px; background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
-        .activity-item { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid var(--border); transition: 0.2s; }
-        .activity-item:hover { background: #1c2128; }
-        .activity-item:last-child { border-bottom: none; }
-        
-        .btn-sync { background: var(--strava); color: white; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 13px; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div class="header">
-        <div class="brand">APEXNITY</div>
-        <a href="https://www.strava.com/oauth/authorize?client_id=GANTI_ID_STRAVA&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=activity:read_all" class="btn-sync">SYNC DATA</a>
+<div class="target-box">
+    <div style="display: flex; justify-content: space-between; font-size: 14px; align-items: center;">
+        <span>Target Race: <b id="display-target">100</b>K</span>
+        <button onclick="changeTarget()" style="background:none; border:1px solid #444; color:#aaa; font-size:10px; cursor:pointer; border-radius:4px; padding:2px 5px;">EDIT</button>
+        <span id="target-percent">0%</span>
     </div>
-
-    <div class="target-box">
-        <div style="display: flex; justify-content: space-between; font-size: 14px;">
-            <span>Target Persiapan: <b>116K Ultra-Trail</b></span>
-            <span id="target-percent">0%</span>
-        </div>
-        <div class="progress-bg"><div id="progress-bar" class="progress-fill"></div></div>
-    </div>
-
-    <div class="grid">
-        <div class="card"><h3>Fitness (CTL)</h3><div class="value" id="ctl-val">0</div></div>
-        <div class="card"><h3>Fatigue (ATL)</h3><div class="value" id="atl-val" style="color: #ff4500;">0</div></div>
-        <div class="card"><h3>Form (TSB)</h3><div class="value" id="tsb-val" style="color: #00ff88;">0</div></div>
-        <div class="card"><h3>Total Elev (m)</h3><div class="value" id="total-elev">0</div></div>
-    </div>
-
-    <div class="main-chart">
-        <canvas id="pmcChart"></canvas>
-    </div>
-
-    <h2 style="margin-top:30px; font-size:18px;">Recent Activities</h2>
-    <div class="activity-list" id="activity-container">
-        </div>
+    <div class="progress-bg"><div id="progress-bar" class="progress-fill"></div></div>
 </div>
 
 <script>
+    let currentUserId = ""; // Akan diisi saat data load
+
     async function loadApexnity() {
         const res = await fetch('/api/metrics');
         const data = await res.json();
         
         if(data && data.length > 0) {
             const latest = data[0];
-            document.getElementById('ctl-val').innerText = Math.round(latest.ctl || 0);
-            document.getElementById('atl-val').innerText = Math.round(latest.atl || 0);
-            document.getElementById('tsb-val').innerText = Math.round(latest.tsb || 0);
+            currentUserId = latest.user_id;
+            const targetKm = latest.target_km || 100;
             
-            // Hitung Progress Target (Contoh: Total Jarak 30 hari terakhir vs 116KM)
+            document.getElementById('display-target').innerText = targetKm;
+            document.getElementById('ctl-val').innerText = Math.round(latest.ctl);
+            document.getElementById('atl-val').innerText = Math.round(latest.atl);
+            document.getElementById('tsb-val').innerText = Math.round(latest.tsb);
+            
+            // Hitung Progress berdasarkan target dari DB
             const totalDist = data.reduce((s, a) => s + (parseFloat(a.distance) || 0), 0) / 1000;
-            const percent = Math.min(Math.round((totalDist / 116) * 100), 100);
+            const percent = Math.min(Math.round((totalDist / targetKm) * 100), 100);
+            
             document.getElementById('progress-bar').style.width = percent + '%';
             document.getElementById('target-percent').innerText = percent + '%';
             
             renderPMC(data.reverse());
-            renderActivities(data.slice(0, 5)); // Tampilkan 5 terakhir
+            renderActivities(data.slice(0, 5));
         }
     }
 
-    function renderActivities(data) {
-        const container = document.getElementById('activity-container');
-        container.innerHTML = data.map(act => `
-            <div class="activity-item">
-                <div>
-                    <div style="font-weight:bold; color:white;">${act.title || 'Trail Run'}</div>
-                    <div style="font-size:12px; color:#8b949e;">${new Date(act.start_date).toLocaleDateString()}</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-weight:bold; color:var(--accent);">${(act.distance/1000).toFixed(1)} km</div>
-                    <div style="font-size:12px; color:#8b949e;">${act.total_elevation_gain || 0}m Gain</div>
-                </div>
-            </div>
-        `).join('');
+    async function changeTarget() {
+        const newTarget = prompt("Masukkan target kilometer race kamu:", "116");
+        if (newTarget && currentUserId) {
+            const res = await fetch('/api/set-target', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: currentUserId, target_km: parseFloat(newTarget) })
+            });
+            if(res.ok) location.reload();
+        }
     }
-
-    function renderPMC(data) {
-        const ctx = document.getElementById('pmcChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.map(d => new Date(d.record_date).toLocaleDateString()),
-                datasets: [
-                    { label: 'Fitness (CTL)', data: data.map(d => d.ctl), borderColor: '#00f2ff', tension: 0.3, fill: false },
-                    { label: 'Form (TSB)', data: data.map(d => d.tsb), backgroundColor: 'rgba(0, 255, 136, 0.2)', fill: true, type: 'bar' }
-                ]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                scales: { y: { grid: { color: '#30363d' } }, x: { grid: { display: false } } }
-            }
-        });
-    }
-
-    loadApexnity();
+    // ... rest of chart functions ...
 </script>
-
-</body>
-</html>
