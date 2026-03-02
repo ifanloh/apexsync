@@ -6,7 +6,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// FUNGSI MASAK DATA: Hapus dulu baru Input (Anti Error Constraint)
+// FUNGSI MASAK DATA: Hapus dulu baru Input (Anti Error)
 async function calculateMetrics(userId) {
   const client = await pool.connect();
   try {
@@ -22,7 +22,6 @@ async function calculateMetrics(userId) {
       atl = atl + (tss - atl) / 7;
       const tsb = ctl - atl;
 
-      // Hapus data lama di tanggal yang sama agar tidak double
       await client.query("DELETE FROM user_metrics WHERE user_id = $1 AND record_date = $2", [userId, act.start_date]);
       
       await client.query(
@@ -44,7 +43,7 @@ module.exports = async (req, res) => {
   const { url, query, method, body } = req;
 
   try {
-    // 1. ENDPOINT AMBIL DATA
+    // 1. ENDPOINT AMBIL DATA DASHBOARD
     if (url.includes('/api/metrics')) {
       const client = await pool.connect();
       const result = await client.query(`
@@ -68,7 +67,7 @@ module.exports = async (req, res) => {
       return res.json({ status: "success" });
     }
 
-    // 3. STRAVA SYNC (VERSI TOTAL NO-CONFLICT)
+    // 3. STRAVA SYNC
     if (query && query.code) {
       const tokenRes = await axios.post('https://www.strava.com/oauth/token', {
         client_id: process.env.STRAVA_CLIENT_ID,
@@ -85,17 +84,18 @@ module.exports = async (req, res) => {
       
       const client = await pool.connect();
       
-      // Simpan User (Hapus dulu baru insert biar gak error)
+      // Update User dengan Access Token agar database tidak marah
       await client.query("DELETE FROM connected_platforms WHERE user_id = $1", [uid]);
-      await client.query("INSERT INTO connected_platforms (user_id, platform_name) VALUES ($1, 'strava')", [uid]);
+      await client.query(
+        "INSERT INTO connected_platforms (user_id, platform_name, access_token) VALUES ($1, 'strava', $2)", 
+        [uid, access_token]
+      );
 
       for (const act of actRes.data) {
         const isTrail = act.total_elevation_gain > (act.distance / 1000) * 10;
         const tss = (act.moving_time / 3600) * (isTrail ? 0.95 : 0.85) * 100;
         
-        // HAPUS DULU AKTIVITAS LAMA (Biar gak conflict)
         await client.query("DELETE FROM activities WHERE activity_id = $1", [act.id.toString()]);
-        
         await client.query(
           `INSERT INTO activities (user_id, activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date, type)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -104,13 +104,12 @@ module.exports = async (req, res) => {
       }
       client.release();
       
-      // Hitung Metrics
       await calculateMetrics(uid);
       
       return res.send("<script>window.location.href='/'</script>");
     }
 
-    return res.status(200).json({ status: "Apexnity Active" });
+    return res.status(200).json({ status: "Apexnity Engine Active" });
   } catch (e) { 
     return res.status(500).json({ error: e.message }); 
   }
