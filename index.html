@@ -1,51 +1,117 @@
-<div class="target-box">
-    <div style="display: flex; justify-content: space-between; font-size: 14px; align-items: center;">
-        <span>Target Race: <b id="display-target">100</b>K</span>
-        <button onclick="changeTarget()" style="background:none; border:1px solid #444; color:#aaa; font-size:10px; cursor:pointer; border-radius:4px; padding:2px 5px;">EDIT</button>
-        <span id="target-percent">0%</span>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Apexnity | Race Strategy</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --accent: #00f2ff; --border: #30363d; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .panel { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 12px; }
+        .input-group { margin-bottom: 15px; }
+        input, select, textarea { width: 100%; background: #0d1117; border: 1px solid var(--border); color: white; padding: 8px; border-radius: 6px; margin-top: 5px; }
+        .btn-save { background: var(--accent); color: black; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="main-content">
+        <h1 style="color:var(--accent)">APEXNITY <span style="font-size: 14px; color: #8b949e;">RACE COMMANDER</span></h1>
+        
+        <div class="panel" id="race-summary" style="margin-bottom: 20px;">
+            <h2 id="summary-title">No Race Planned</h2>
+            <div id="countdown-timer" style="font-size: 24px; font-weight: bold; color: var(--accent);">-- : -- : --</div>
+            <p id="target-detail">Set your strategy on the right panel.</p>
+        </div>
+
+        <div class="panel">
+            <h3>Training Load (PMC)</h3>
+            <canvas id="pmcChart" height="250"></canvas>
+        </div>
     </div>
-    <div class="progress-bg"><div id="progress-bar" class="progress-fill"></div></div>
+
+    <div class="panel">
+        <h3 style="margin-top:0">Race Strategy</h3>
+        <div class="input-group">
+            <label>Race Name</label>
+            <input type="text" id="in-name" placeholder="e.g. Rinjani 100">
+        </div>
+        <div class="input-group">
+            <label>Distance (KM)</label>
+            <input type="number" id="in-km" placeholder="116">
+        </div>
+        <div class="input-group">
+            <label>Target Finish (HH:MM)</label>
+            <input type="text" id="in-finish" placeholder="24:00">
+        </div>
+        <div class="input-group">
+            <label>GPX Course Data (Paste URL/Text)</label>
+            <textarea id="in-gpx" rows="4" placeholder="Paste GPX XML or Route URL"></textarea>
+        </div>
+        <div class="input-group">
+            <label>Race Date</label>
+            <input type="date" id="in-date">
+        </div>
+        <button class="btn-save" onclick="saveStrategy()">SAVE STRATEGY</button>
+    </div>
 </div>
 
 <script>
-    let currentUserId = ""; // Akan diisi saat data load
+    let currentUserId = "";
 
-    async function loadApexnity() {
+    async function loadData() {
         const res = await fetch('/api/metrics');
         const data = await res.json();
-        
         if(data && data.length > 0) {
-            const latest = data[0];
-            currentUserId = latest.user_id;
-            const targetKm = latest.target_km || 100;
+            const last = data[0];
+            currentUserId = last.user_id;
             
-            document.getElementById('display-target').innerText = targetKm;
-            document.getElementById('ctl-val').innerText = Math.round(latest.ctl);
-            document.getElementById('atl-val').innerText = Math.round(latest.atl);
-            document.getElementById('tsb-val').innerText = Math.round(latest.tsb);
+            // Update Dashboard UI
+            document.getElementById('summary-title').innerText = `${last.target_km}K ${last.target_type} Race`;
+            document.getElementById('target-detail').innerText = `Target Finish: ${last.target_finish_time || '--'} | Elev Target: ${last.total_elevation_target || '--'}m`;
             
-            // Hitung Progress berdasarkan target dari DB
-            const totalDist = data.reduce((s, a) => s + (parseFloat(a.distance) || 0), 0) / 1000;
-            const percent = Math.min(Math.round((totalDist / targetKm) * 100), 100);
+            // Fill Form
+            document.getElementById('in-km').value = last.target_km;
+            document.getElementById('in-finish').value = last.target_finish_time;
             
-            document.getElementById('progress-bar').style.width = percent + '%';
-            document.getElementById('target-percent').innerText = percent + '%';
-            
-            renderPMC(data.reverse());
-            renderActivities(data.slice(0, 5));
+            startCountdown(last.race_date);
+            // ... render chart ...
         }
     }
 
-    async function changeTarget() {
-        const newTarget = prompt("Masukkan target kilometer race kamu:", "116");
-        if (newTarget && currentUserId) {
-            const res = await fetch('/api/set-target', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: currentUserId, target_km: parseFloat(newTarget) })
-            });
-            if(res.ok) location.reload();
-        }
+    async function saveStrategy() {
+        const strategy = {
+            user_id: currentUserId,
+            target_km: document.getElementById('in-km').value,
+            target_type: "Trail", // Bisa ditambah logic select
+            race_date: document.getElementById('in-date').value,
+            target_finish: document.getElementById('in-finish').value,
+            gpx_data: document.getElementById('in-gpx').value
+        };
+
+        const res = await fetch('/api/save-strategy', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(strategy)
+        });
+        
+        if(res.ok) alert("Strategy Locked! Semangat latihannya, Hariri.");
+        location.reload();
     }
-    // ... rest of chart functions ...
+
+    function startCountdown(date) {
+        const target = new Date(date).getTime();
+        setInterval(() => {
+            const now = new Date().getTime();
+            const diff = target - now;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            document.getElementById('countdown-timer').innerText = `${days}D ${hours}H REMAINING`;
+        }, 1000);
+    }
+
+    loadData();
 </script>
+</body>
+</html>
