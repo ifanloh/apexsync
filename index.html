@@ -2,125 +2,82 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Apexnity | Race Commander</title>
+    <title>Apexnity | Commander</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
     <style>
         :root { --bg: #0b0e14; --card: #161b22; --accent: #00f2ff; --border: #30363d; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; margin: 0; padding: 20px; }
-        .wrapper { max-width: 1200px; margin: auto; display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
-        .panel { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-        #race-map { height: 400px; border-radius: 8px; background: #0d1117; }
-        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 15px 0; }
-        .stat-card { background: #0d1117; padding: 15px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
-        input, textarea, select { width: 100%; background: #0d1117; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 6px; margin-top: 5px; box-sizing: border-box; }
-        .btn { background: var(--accent); color: black; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; }
-        .sidebar-sync { display: block; text-align: center; background: #fc4c02; color: white; text-decoration: none; padding: 12px; border-radius: 6px; font-weight: bold; margin-top: 20px; }
+        body { font-family: sans-serif; background: var(--bg); color: #c9d1d9; padding: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; max-width: 1200px; margin: auto; }
+        .panel { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+        .stat-card { text-align: center; padding: 10px; background: #0d1117; border-radius: 8px; }
+        .stat-card div { font-size: 24px; font-weight: bold; color: white; }
+        input { width: 100%; padding: 10px; background: #0d1117; border: 1px solid var(--border); color: white; margin-top: 10px; border-radius: 6px; box-sizing: border-box;}
+        .btn-strava { display: block; text-align: center; background: #fc4c02; color: white; text-decoration: none; padding: 12px; border-radius: 6px; font-weight: bold; margin-top: 20px; }
     </style>
 </head>
 <body>
-
-<div class="wrapper">
-    <div class="main">
-        <div class="panel">
-            <h1 id="disp-race-name" style="margin:0; color:white;">APEXNITY COMMANDER</h1>
-            <div id="disp-timer" style="font-family:monospace; font-size:24px; color:var(--accent);">00D 00H 00M 00S</div>
-            <div class="stat-grid">
-                <div class="stat-card"><small>CTL (Fitness)</small><div id="v-ctl" style="font-weight:bold; font-size:20px;">0</div></div>
-                <div class="stat-card"><small>ATL (Fatigue)</small><div id="v-atl" style="font-weight:bold; font-size:20px;">0</div></div>
-                <div class="stat-card"><small>TSB (Form)</small><div id="v-tsb" style="font-weight:bold; font-size:20px;">0</div></div>
-                <div class="stat-card"><small>TARGET KM</small><div id="v-prog" style="font-weight:bold; font-size:20px;">0</div></div>
+    <div class="grid">
+        <div class="main">
+            <div class="panel">
+                <h1 id="r-name">APEXNITY</h1>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    <div class="stat-card"><small>CTL</small><div id="v-ctl">0</div></div>
+                    <div class="stat-card"><small>ATL</small><div id="v-atl">0</div></div>
+                    <div class="stat-card"><small>TSB</small><div id="v-tsb">0</div></div>
+                </div>
+            </div>
+            <div class="panel" style="margin-top:20px;">
+                <canvas id="chart" height="300"></canvas>
             </div>
         </div>
-        <div class="panel"><h3>Race Course Map</h3><div id="race-map"></div></div>
-        <div class="panel"><h3>Training Load Trend</h3><div style="height: 250px;"><canvas id="pmcChart"></canvas></div></div>
-    </div>
-
-    <div class="sidebar">
-        <div class="panel">
-            <h3 style="color:var(--accent); margin-top:0;">Race Strategy</h3>
-            <input type="text" id="in-name" placeholder="Race Name">
-            <input type="number" id="in-km" placeholder="Dist (KM)" style="margin-top:10px;">
-            <input type="number" id="in-elev" placeholder="Ascent (M)" style="margin-top:10px;">
-            <input type="date" id="in-date" style="margin-top:10px;">
-            <input type="text" id="in-finish" placeholder="Target Finish (HH:MM:SS)" style="margin-top:10px;">
-            <input type="file" id="in-file" accept=".gpx" onchange="readGPX(this)" style="margin-top:10px;">
-            <button class="btn" style="margin-top:15px;" onclick="save()">LOCK STRATEGY</button>
+        <div class="side">
+            <div class="panel">
+                <h3>Race Strategy</h3>
+                <input type="text" id="in-name" placeholder="Race Name">
+                <input type="number" id="in-km" placeholder="Target KM">
+                <input type="date" id="in-date">
+                <button onclick="save()" style="width:100%; margin-top:15px; padding:10px; cursor:pointer;">SAVE STRATEGY</button>
+            </div>
+            <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=activity:read_all" class="btn-strava">SYNC STRAVA</a>
         </div>
-        <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=activity:read_all" class="sidebar-sync">SYNC WITH STRAVA</a>
     </div>
-</div>
 
-<script>
-    let userId, map, gpxContent;
-
-    async function load() {
-        try {
+    <script>
+        let uId;
+        async function load() {
             const res = await fetch('/api/metrics');
             const data = await res.json();
             if(data && data.length > 0) {
                 const last = data[0];
-                userId = last.user_id;
-                document.getElementById('disp-race-name').innerText = last.race_name || "PLAN YOUR RACE";
-                document.getElementById('v-ctl').innerText = Math.round(last.ctl || 0);
-                document.getElementById('v-atl').innerText = Math.round(last.atl || 0);
-                document.getElementById('v-tsb').innerText = Math.round(last.tsb || 0);
-                document.getElementById('v-prog').innerText = last.target_km || 0;
-                
-                if(last.race_date) startTimer(last.race_date);
-                if(last.gpx_data) drawMap(last.gpx_data);
+                uId = last.user_id;
+                document.getElementById('r-name').innerText = last.race_name || "DASHBOARD READY";
+                document.getElementById('v-ctl').innerText = Math.round(last.ctl);
+                document.getElementById('v-atl').innerText = Math.round(last.atl);
+                document.getElementById('v-tsb').innerText = Math.round(last.tsb);
                 renderChart(data.reverse());
+            } else {
+                console.log("Menunggu data...");
             }
-        } catch(e) { console.error(e); }
-    }
+        }
 
-    function readGPX(input) {
-        const reader = new FileReader();
-        reader.onload = (e) => gpxContent = e.target.result;
-        reader.readAsText(input.files[0]);
-    }
+        async function save() {
+            const payload = {
+                user_id: uId, race_name: document.getElementById('in-name').value,
+                target_km: document.getElementById('in-km').value, race_date: document.getElementById('in-date').value
+            };
+            await fetch('/api/save-strategy', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            location.reload();
+        }
 
-    async function save() {
-        if(!userId) { alert("Please Sync Strava first!"); return; }
-        const payload = {
-            user_id: userId, race_name: document.getElementById('in-name').value,
-            target_km: document.getElementById('in-km').value, total_ascent: document.getElementById('in-elev').value,
-            race_date: document.getElementById('in-date').value, target_finish: document.getElementById('in-finish').value,
-            gpx_content: gpxContent, target_type: "Trail"
-        };
-        await fetch('/api/save-strategy', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-        location.reload();
-    }
-
-    function drawMap(gpx) {
-        if(map) map.remove();
-        map = L.map('race-map').setView([0,0], 10);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        try { new L.GPX(gpx, { async: true, polyline_options: {color: '#00f2ff', weight: 4} }).on('loaded', e => map.fitBounds(e.target.getBounds())).addTo(map); } catch(e) {}
-    }
-
-    function startTimer(date) {
-        setInterval(() => {
-            const diff = new Date(date) - new Date();
-            if(diff < 0) return;
-            const d = Math.floor(diff / 864e5), h = Math.floor((diff % 864e5) / 36e5), m = Math.floor((diff % 36e5) / 6e4), s = Math.floor((diff % 6e4) / 1000);
-            document.getElementById('disp-timer').innerText = `${d}D ${h}H ${m}M ${s}S`;
-        }, 1000);
-    }
-
-    function renderChart(data) {
-        new Chart(document.getElementById('pmcChart'), {
-            type: 'line',
-            data: { 
-                labels: data.map(d => new Date(d.record_date).toLocaleDateString()), 
-                datasets: [{ label: 'CTL (Fitness)', data: data.map(d => d.ctl), borderColor: '#00f2ff', tension: 0.3 }] 
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    }
-    load();
-</script>
+        function renderChart(data) {
+            new Chart(document.getElementById('chart'), {
+                type: 'line',
+                data: { labels: data.map(d => new Date(d.record_date).toLocaleDateString()), 
+                datasets: [{ label: 'Fitness (CTL)', data: data.map(d => d.ctl), borderColor: '#00f2ff', tension: 0.3 }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+        load();
+    </script>
 </body>
 </html>
