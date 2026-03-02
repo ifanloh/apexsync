@@ -7,9 +7,12 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --bg: #0b0e14; --card: #161b22; --border: #30363d; --text: #c9d1d9; --cyan: #00f2ff; --orange: #fc4c02; --sidebar-w: 260px; --sidebar-c: 75px; }
+        :root {
+            --bg: #0b0e14; --card: #161b22; --border: #30363d; --text: #c9d1d9;
+            --cyan: #00f2ff; --orange: #fc4c02; --red: #ff4d4d; --green: #2ecc71;
+            --sidebar-w: 260px; --sidebar-c: 75px;
+        }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        
         #sidebar { width: var(--sidebar-w); height: 100vh; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: width 0.3s ease; z-index: 100; }
         #sidebar.collapsed { width: var(--sidebar-c); }
         .sidebar-header { padding: 20px; display: flex; align-items: center; justify-content: space-between; }
@@ -20,20 +23,30 @@
         .nav-item { display: flex; align-items: center; gap: 15px; padding: 12px 15px; color: var(--text); text-decoration: none; border-radius: 6px; margin-bottom: 5px; cursor: pointer; }
         .nav-item.active { background: #21262d; color: var(--cyan); }
         .collapsed .nav-item span { display: none; }
-        .btn-sync { background: var(--orange); color: white; margin: 10px; padding: 12px; border-radius: 6px; text-decoration: none; display: flex; align-items: center; gap: 12px; font-weight: bold; justify-content: center; }
+        .btn-sync { background: var(--orange); color: white; margin: 10px; padding: 12px; border-radius: 6px; text-decoration: none; display: flex; align-items: center; gap: 12px; font-weight: bold; justify-content: center; position: absolute; bottom: 10px; left: 0; right: 0; }
         .collapsed .btn-sync span { display: none; }
 
-        #main-content { margin-left: 0; padding: 30px; width: 100%; height: 100vh; overflow-y: auto; box-sizing: border-box; }
+        #main-content { margin-left: 0; padding: 25px; width: 100%; height: 100vh; overflow-y: auto; box-sizing: border-box; }
         .page { display: none; }
         .page.active { display: block; }
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; max-width: 1300px; }
-        .card { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 6px; }
-        .card-h { font-size: 11px; color: #8b949e; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; }
-        .big-val { font-size: 42px; font-weight: 800; color: white; text-align: center; margin: 10px 0; }
-        input { background: #0d1117; border: 1px solid var(--border); color: white; padding: 12px; border-radius: 4px; width: 100%; margin-bottom: 15px; box-sizing: border-box; }
-        .btn-save { background: var(--cyan); color: black; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        td { padding: 10px 0; border-bottom: 1px solid #21262d; }
+
+        /* GRID DENSITY: Balikin ke 4 Kolom Padat */
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 1400px; margin-bottom: 20px; }
+        .card { background: var(--card); border: 1px solid var(--border); padding: 12px; border-radius: 4px; }
+        .card-h { font-size: 11px; color: #8b949e; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; font-weight: 600; }
+        
+        .big-val { font-size: 32px; font-weight: 800; color: white; text-align: center; margin: 5px 0; }
+        .span-2 { grid-column: span 2; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        td { padding: 6px 0; border-bottom: 1px solid #21262d; }
+        .icon-box { color: var(--orange); vertical-align: middle; padding-right: 5px; }
+
+        /* Performance Bars */
+        .p-bar { height: 4px; background: #21262d; border-radius: 2px; margin: 6px 0; position: relative; }
+        .p-fill { height: 100%; background: var(--orange); border-radius: 2px; }
+        .recovery-gradient { height: 6px; background: linear-gradient(to right, var(--red), var(--orange), var(--green), var(--cyan)); border-radius: 3px; position: relative; margin-top: 15px; }
+        .pointer { position: absolute; top: -8px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 8px solid white; transition: left 0.5s ease; }
     </style>
 </head>
 <body class="collapsed-mode">
@@ -41,13 +54,13 @@
 <nav id="sidebar" class="collapsed">
     <div class="sidebar-header">
         <span style="font-weight:800; color:white;">APEXNITY</span>
-        <button onclick="toggleSide()" id="toggle-sidebar" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="menu"></i></button>
+        <button onclick="toggleSide()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="menu"></i></button>
     </div>
     <div class="profile-box">
         <div class="profile-img" id="user-initial">A</div>
         <div class="profile-info">
             <div id="user-name" style="font-weight: bold; color: white;">Athlete</div>
-            <small id="user-platform" style="color: #8b949e;">Sync to start</small>
+            <small style="color: #8b949e;">Strava Connected</small>
         </div>
     </div>
     <div class="nav-links">
@@ -56,7 +69,7 @@
         <div class="nav-item" onclick="switchPage('strategy', this)"><i data-lucide="map"></i> <span>Strategy</span></div>
     </div>
     <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api/metrics&scope=activity:read_all" class="btn-sync">
-        <i data-lucide="refresh-cw"></i> <span>SYNC STRAVA</span>
+        <i data-lucide="refresh-cw"></i> <span>SYNC</span>
     </a>
 </nav>
 
@@ -64,44 +77,97 @@
     <section id="page-dashboard" class="page active">
         <div class="grid">
             <div class="card">
-                <div class="card-h" id="dash-race-name">CURRENT GOAL</div>
-                <div id="dash-timer" style="font-size: 20px; font-weight: 800; color: var(--cyan); text-align: center;">NO RACE SET</div>
-                <div style="margin-top:15px; text-align:center;"><small>EST. FINISH</small><br><b id="dash-est" style="color:white;">--:--:--</b></div>
-            </div>
-            <div class="card">
-                <div class="card-h">Fitness <i data-lucide="zap" size="12"></i></div>
+                <div class="card-h">Running Fitness <i data-lucide="info" size="12"></i></div>
                 <div class="big-val" id="v-ctl">0</div>
+                <div id="fitness-bars">
+                    <div style="font-size:9px; display:flex; justify-content:space-between;"><span>Endurance</span><span id="end-val">0</span></div>
+                    <div class="p-bar"><div class="p-fill" id="end-fill" style="width: 0%"></div></div>
+                    <div style="font-size:9px; display:flex; justify-content:space-between; margin-top:5px;"><span>Threshold</span><span id="thr-val">0</span></div>
+                    <div class="p-bar"><div class="p-fill" id="thr-fill" style="width: 0%"></div></div>
+                </div>
             </div>
-            <div class="card" style="grid-column: span 2;">
-                <div class="card-h">Weekly Volume (KM)</div>
-                <canvas id="weeklyChart" height="90"></canvas>
+
+            <div class="card">
+                <div class="card-h">Training Status <i data-lucide="info" size="12"></i></div>
+                <div style="color:var(--orange); font-size:18px; font-weight:bold; margin-bottom:5px;" id="v-status">Optimized</div>
+                <p style="font-size:10px; color:#8b949e; line-height:1.3;" id="v-status-desc"></p>
+                <div style="display:flex; justify-content:space-between; margin-top:10px; text-align:center; font-size:10px;">
+                    <div>Load Impact<br><b id="v-atl" style="font-size:14px; color:white;">0</b></div>
+                    <div>Base Fitness<br><b id="v-ctl-small" style="font-size:14px; color:white;">0</b></div>
+                    <div>Trend<br><b id="v-trend" style="font-size:14px; color:var(--green);">0%</b></div>
+                </div>
             </div>
-            <div class="card" style="grid-column: span 4;">
-                <div class="card-h">Performance trend</div>
-                <canvas id="pmcChart" height="150"></canvas>
+
+            <div class="card">
+                <div class="card-h">Recovery <i data-lucide="info" size="12"></i></div>
+                <div style="display:flex; align-items:center; justify-content:center; gap:15px; padding:10px 0;">
+                    <i data-lucide="user" size="32" style="color:#8b949e"></i>
+                    <div style="text-align:center;">
+                        <div style="font-size:28px; font-weight:bold;" id="rec-val">0%</div>
+                        <small id="rec-hours" style="font-size:9px;">-- hr till full</small>
+                    </div>
+                </div>
+                <div class="recovery-gradient"><div class="pointer" id="rec-pointer" style="left: 0%;"></div></div>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Recent Activities</div>
+                <table id="act-table"></table>
+            </div>
+
+            <div class="card span-2">
+                <div class="card-h">Performance Management Chart (PMC)</div>
+                <canvas id="pmcChart" height="120"></canvas>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Threshold Pace Zones</div>
+                <div style="font-size:12px; margin-bottom:5px;">Threshold <b id="v-main-pace">--'--"</b></div>
+                <table id="zone-table"></table>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Weekly Activity <i data-lucide="info" size="12"></i></div>
+                <canvas id="weeklyChart" height="150"></canvas>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Personal Running Record</div>
+                <table id="pr-table"></table>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Race Predictor <i data-lucide="info" size="12"></i></div>
+                <table id="race-table"></table>
+            </div>
+
+            <div class="card">
+                <div class="card-h">Current Goal</div>
+                <div id="dash-timer" style="font-size: 16px; font-weight: 800; color: var(--cyan); text-align: center; margin: 10px 0;">NO RACE SET</div>
+                <div style="text-align:center; border-top:1px solid #21262d; padding-top:10px;">
+                    <small style="font-size:9px;">EST. FINISH</small><br><b id="dash-est" style="color:white; font-size:14px;">--:--:--</b>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-h">Threshold Heart Rate Zones</div>
+                <table style="font-size:10px;">
+                    <tr><td>Recovery</td><td style="text-align:right">< 138</td></tr>
+                    <tr><td>Threshold</td><td style="text-align:right">165 - 176</td></tr>
+                    <tr><td>Anaerobic</td><td style="text-align:right">> 183</td></tr>
+                </table>
             </div>
         </div>
     </section>
 
     <section id="page-race" class="page">
         <div class="grid">
-            <div class="card" style="grid-column: span 2;">
+            <div class="card span-2">
                 <div class="card-h">Set Race Target</div>
-                <input type="text" id="in-race-name" placeholder="Race Name (e.g. Ultra Trail 100)">
+                <input type="text" id="in-race-name" placeholder="Race Name">
                 <input type="number" id="in-race-km" placeholder="Distance (KM)">
                 <input type="date" id="in-race-date">
                 <button class="btn-save" onclick="saveRace()">LOCK TARGET</button>
-            </div>
-            <div class="card" style="grid-column: span 2;">
-                <div class="card-h">Summary Target</div>
-                <div style="text-align:center;">
-                    <h2 id="sum-name">Not Defined</h2>
-                    <div style="font-size:32px; font-weight:800;" id="sum-km">0 KM</div>
-                    <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:15px;">
-                        <small>ESTIMATED FINISH TIME</small>
-                        <div style="font-size:24px; color:var(--cyan); font-weight:bold;" id="sum-est">--:--:--</div>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
@@ -130,58 +196,76 @@
         const res = await fetch('/api/metrics');
         const root = await res.json();
         if (root.metrics && root.metrics.length > 0) {
-            const last = root.metrics[0];
+            const metrics = root.metrics;
+            const last = metrics[0];
             uId = last.user_id;
 
-            // Profile Data Dinamis dari Strava
+            // Header & Fitness
             document.getElementById('user-name').innerText = last.display_name || "Athlete";
             document.getElementById('user-initial').innerText = (last.display_name || "A").charAt(0);
-            document.getElementById('user-platform').innerText = "Strava Connected";
-
-            // Dashboard & Race Target
-            document.getElementById('dash-race-name').innerText = last.race_name || "CURRENT GOAL";
-            document.getElementById('sum-name').innerText = last.race_name || "Not Defined";
-            document.getElementById('sum-km').innerText = (last.target_km || 0) + " KM";
             document.getElementById('v-ctl').innerText = Math.round(last.ctl);
+            document.getElementById('v-ctl-small').innerText = Math.round(last.ctl);
+            document.getElementById('v-atl').innerText = Math.round(last.atl);
+            
+            // Bars & Status
+            document.getElementById('end-val').innerText = Math.round(last.ctl);
+            document.getElementById('end-fill').style.width = Math.min(100, (last.ctl/120)*100) + "%";
+            const trend = last.ctl > 0 ? Math.round((last.atl/last.ctl)*100) : 0;
+            document.getElementById('v-trend').innerText = trend + "%";
+            document.getElementById('v-status-desc').innerText = "Fitness levels are improving based on your " + (last.race_name || "training") + " prep.";
 
-            currentPace = 253 - (last.ctl * 0.45); // Kalkulasi pace dasar
+            // Recovery Calculation
+            const rec = Math.max(0, Math.min(100, 100 - Math.round(last.atl * 0.8)));
+            document.getElementById('rec-val').innerText = rec + "%";
+            document.getElementById('rec-pointer').style.left = rec + "%";
+            document.getElementById('rec-hours').innerText = Math.round((100-rec)*0.5) + " hr(s) till full";
 
-            if(last.race_date) startCountdown(last.race_date);
-            if(last.target_km) calcEst(last.target_km);
+            // Recent Activities with Icons
+            const actTable = document.getElementById('act-table');
+            root.activities.slice(0, 5).forEach(a => {
+                let icon = a.type === 'Ride' ? 'bike' : (a.type === 'WeightTraining' ? 'dumbbell' : 'run');
+                actTable.innerHTML += `<tr>
+                    <td><i data-lucide="${icon}" class="icon-box" size="12"></i></td>
+                    <td>${new Date(a.start_date).toLocaleDateString('id-ID', {weekday:'short'})}</td>
+                    <td>${(a.distance/1000).toFixed(1)}k</td>
+                    <td style="text-align:right;">${Math.round(a.training_load)}TL</td>
+                </tr>`;
+            });
+
+            // Pace Zones & Records
+            currentPace = 253 - (last.ctl * 0.45);
+            document.getElementById('v-main-pace').innerText = formatPace(currentPace);
+            document.getElementById('zone-table').innerHTML = `
+                <tr><td><span class="p-bar" style="background:var(--green); width:8px; height:8px; display:inline-block; border-radius:50%"></span> Aerobic</td><td style="text-align:right">${formatPace(currentPace*1.15)}</td></tr>
+                <tr><td><span class="p-bar" style="background:var(--orange); width:8px; height:8px; display:inline-block; border-radius:50%"></span> Threshold</td><td style="text-align:right">${formatPace(currentPace*1.0)}</td></tr>
+            `;
+
+            document.getElementById('pr-table').innerHTML = `
+                <tr><td>Longest</td><td style="text-align:right">${(root.prs.max_dist/1000).toFixed(1)}k</td></tr>
+                <tr><td>Elev</td><td style="text-align:right">${Math.round(root.prs.max_elev)}m</td></tr>
+            `;
+
+            // Goal & Race Predictor
+            if(last.race_date) {
+                startCountdown(last.race_date);
+                document.getElementById('dash-timer').style.fontSize = '12px';
+            }
+            if(last.target_km) {
+                const totalSec = last.target_km * currentPace;
+                document.getElementById('dash-est').innerText = formatTime(totalSec);
+            }
+            const raceTable = document.getElementById('race-table');
+            const races = [{n:'10k', d:10}, {n:'Half', d:21.1}, {n:'Marathon', d:42.2}];
+            races.forEach(r => raceTable.innerHTML += `<tr><td>${r.n}</td><td style="text-align:right">${formatTime(r.d * currentPace)}</td></tr>`);
 
             renderCharts(root.metrics, root.weekly);
         }
         lucide.createIcons();
     }
 
-    function calcEst(km) {
-        const totalSec = km * currentPace;
-        const h = Math.floor(totalSec / 3600);
-        const m = Math.floor((totalSec % 3600) / 60);
-        const s = Math.round(totalSec % 60);
-        const timeStr = `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-        document.getElementById('dash-est').innerText = timeStr;
-        document.getElementById('sum-est').innerText = timeStr;
-    }
-
-    async function saveRace() {
-        const payload = {
-            user_id: uId, race_name: document.getElementById('in-race-name').value,
-            target_km: document.getElementById('in-race-km').value, race_date: document.getElementById('in-race-date').value
-        };
-        await fetch('/api/save-strategy', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-        location.reload();
-    }
-
-    function startCountdown(date) {
-        const update = () => {
-            const diff = new Date(date) - new Date();
-            if(diff < 0) return;
-            const d = Math.floor(diff / 864e5), h = Math.floor((diff % 864e5) / 36e5);
-            document.getElementById('dash-timer').innerText = `${d}D ${h}H REMAINING`;
-        };
-        update(); setInterval(update, 60000);
-    }
+    function formatPace(s) { const m = Math.floor(s/60); const sec = Math.round(s%60); return `${m}'${sec.toString().padStart(2,'0')}"`; }
+    function formatTime(s) { const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); const sec = Math.round(s%60); return h>0 ? `${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}` : `${m}:${sec.toString().padStart(2,'0')}`; }
+    function startCountdown(date) { const update = () => { const diff = new Date(date) - new Date(); if(diff < 0) return; const d = Math.floor(diff/864e5), h = Math.floor((diff%864e5)/36e5); document.getElementById('dash-timer').innerText = `${d}D ${h}H REMAINING`; }; update(); setInterval(update, 60000); }
 
     function renderCharts(metrics, weekly) {
         new Chart(document.getElementById('pmcChart'), {
@@ -195,7 +279,6 @@
             },
             options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
         });
-
         new Chart(document.getElementById('weeklyChart'), {
             type: 'bar',
             data: {
