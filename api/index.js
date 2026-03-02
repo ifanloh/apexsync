@@ -6,7 +6,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// Fungsi "Masak" Data: Mengolah TSS harian menjadi grafik Fitness
+// Fungsi Masak Data: Mengolah TSS harian menjadi grafik Fitness
 async function calculateMetrics(userId) {
   const client = await pool.connect();
   try {
@@ -18,15 +18,15 @@ async function calculateMetrics(userId) {
     let ctl = 0, atl = 0;
     for (let act of res.rows) {
       const tss = parseFloat(act.tss) || 0;
-      // Rumus PMC: CTL (Fitness 42 hari), ATL (Fatigue 7 hari)
       ctl = ctl + (tss - ctl) / 42;
       atl = atl + (tss - atl) / 7;
       const tsb = ctl - atl;
 
+      // UPDATE: Menembak langsung ke (user_id, record_date)
       await client.query(
         `INSERT INTO user_metrics (user_id, record_date, ctl, atl, tsb)
          VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT ON CONSTRAINT unique_user_metrics 
+         ON CONFLICT (user_id, record_date) 
          DO UPDATE SET ctl = EXCLUDED.ctl, atl = EXCLUDED.atl, tsb = EXCLUDED.tsb`,
         [userId, act.start_date, ctl, atl, tsb]
       );
@@ -44,7 +44,6 @@ module.exports = async (req, res) => {
   const { url, query, method } = req;
 
   try {
-    // AMBIL DATA METRICS UNTUK DASHBOARD
     if (url.includes('/api/metrics')) {
       const client = await pool.connect();
       const result = await client.query(`
@@ -56,21 +55,17 @@ module.exports = async (req, res) => {
       return res.json(result.rows);
     }
 
-    // SIMPAN STRATEGY RACE
     if (method === 'POST' && url.includes('/api/save-strategy')) {
       const { user_id, race_name, target_km, race_date, gpx_content } = req.body;
       const client = await pool.connect();
       await client.query(
-        `UPDATE connected_platforms 
-         SET race_name = $1, target_km = $2, race_date = $3, gpx_data = $4 
-         WHERE user_id = $5`,
+        `UPDATE connected_platforms SET race_name = $1, target_km = $2, race_date = $3, gpx_data = $4 WHERE user_id = $5`,
         [race_name, target_km, race_date, gpx_content, user_id]
       );
       client.release();
       return res.json({ status: "success" });
     }
 
-    // STRAVA CALLBACK HANDLER
     if (query && query.code) {
       const tokenRes = await axios.post('https://www.strava.com/oauth/token', {
         client_id: process.env.STRAVA_CLIENT_ID,
@@ -78,7 +73,6 @@ module.exports = async (req, res) => {
         code: query.code,
         grant_type: 'authorization_code'
       });
-
       const { access_token, athlete } = tokenRes.data;
       const uid = athlete.id.toString();
 
@@ -102,15 +96,9 @@ module.exports = async (req, res) => {
         );
       }
       client.release();
-      
-      // TRIGGER HITUNG ULANG METRICS
       await calculateMetrics(uid);
-      
       return res.send("<script>window.location.href='/'</script>");
     }
-
     return res.status(200).json({ status: "Apexnity Engine Active" });
-  } catch (e) { 
-    return res.status(500).json({ error: e.message }); 
-  }
+  } catch (e) { return res.status(500).json({ error: e.message }); }
 };
