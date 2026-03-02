@@ -13,14 +13,14 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { code, state } = req.query; // 'state' kita pakai buat nandain platform (strava/suunto/coros)
+  const { code, state } = req.query; // state: 'strava', 'suunto', 'coros', atau 'garmin'
 
   if (req.method === 'GET' && code) {
     try {
-      let platform = state || 'strava'; // Default ke strava kalau state kosong
+      let platform = state || 'strava';
       let tokenUrl, clientId, clientSecret;
 
-      // Setting tiap platform
+      // Konfigurasi per platform
       if (platform === 'strava') {
         tokenUrl = 'https://www.strava.com/oauth/token';
         clientId = process.env.STRAVA_CLIENT_ID;
@@ -31,6 +31,7 @@ module.exports = async (req, res) => {
         clientSecret = process.env.SUUNTO_CLIENT_SECRET;
       }
 
+      // Tukar code jadi Token
       const response = await axios.post(tokenUrl, {
         client_id: clientId,
         client_secret: clientSecret,
@@ -39,22 +40,25 @@ module.exports = async (req, res) => {
       });
 
       const { access_token, refresh_token } = response.data;
-      const remote_user_id = response.data.athlete?.id || response.data.user_id;
+      // Ambil ID user dari masing-masing platform
+      const remote_id = (platform === 'strava') ? response.data.athlete.id : response.data.user_id;
 
       const client = await pool.connect();
       await client.query(
         `INSERT INTO connected_platforms (user_id, platform_name, access_token, refresh_token) 
          VALUES ($1, $2, $3, $4) 
-         ON CONFLICT (user_id, platform_name) DO UPDATE SET access_token = $3, refresh_token = $4`,
-        [remote_user_id.toString(), platform, access_token, refresh_token]
+         ON CONFLICT (user_id, platform_name) 
+         DO UPDATE SET access_token = $3, refresh_token = $4, created_at = CURRENT_TIMESTAMP`,
+        [remote_id.toString(), platform, access_token, refresh_token]
       );
       client.release();
 
-      return res.send(`<h1>${platform.toUpperCase()} Berhasil Terhubung!</h1><p>Sekarang platform ini sudah masuk radar ApexSync.</p>`);
+      return res.send(`<h1>${platform.toUpperCase()} Berhasil Terhubung!</h1><p>Data lari kamu sekarang terpantau ApexSync.</p>`);
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      console.error(error);
+      return res.status(500).json({ status: "error", message: error.message });
     }
   }
 
-  return res.status(200).json({ status: "ready" });
+  return res.status(200).json({ status: "ready", message: "ApexSync Universal API" });
 };
