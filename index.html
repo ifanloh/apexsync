@@ -13,6 +13,7 @@
         .stat-card div { font-size: 24px; font-weight: bold; color: white; }
         input { width: 100%; padding: 10px; background: #0d1117; border: 1px solid var(--border); color: white; margin-top: 10px; border-radius: 6px; box-sizing: border-box;}
         .btn-strava { display: block; text-align: center; background: #fc4c02; color: white; text-decoration: none; padding: 12px; border-radius: 6px; font-weight: bold; margin-top: 20px; }
+        .btn-save { width:100%; margin-top:15px; padding:10px; cursor:pointer; background:var(--accent); border:none; border-radius:6px; font-weight:bold; }
     </style>
 </head>
 <body>
@@ -21,9 +22,9 @@
             <div class="panel">
                 <h1 id="r-name">APEXNITY</h1>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <div class="stat-card"><small>CTL</small><div id="v-ctl">0</div></div>
-                    <div class="stat-card"><small>ATL</small><div id="v-atl">0</div></div>
-                    <div class="stat-card"><small>TSB</small><div id="v-tsb">0</div></div>
+                    <div class="stat-card"><small>CTL (Fitness)</small><div id="v-ctl">0</div></div>
+                    <div class="stat-card"><small>ATL (Fatigue)</small><div id="v-atl">0</div></div>
+                    <div class="stat-card"><small>TSB (Form)</small><div id="v-tsb">0</div></div>
                 </div>
             </div>
             <div class="panel" style="margin-top:20px;">
@@ -36,12 +37,11 @@
                 <input type="text" id="in-name" placeholder="Race Name">
                 <input type="number" id="in-km" placeholder="Target KM">
                 <input type="date" id="in-date">
-                <button onclick="save()" style="width:100%; margin-top:15px; padding:10px; cursor:pointer;">SAVE STRATEGY</button>
+                <button class="btn-save" onclick="save()">SAVE STRATEGY</button>
             </div>
             <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=activity:read_all" class="btn-strava">SYNC STRAVA</a>
         </div>
     </div>
-
     <script>
         let uId;
         async function load() {
@@ -55,12 +55,10 @@
                 document.getElementById('v-atl').innerText = Math.round(last.atl);
                 document.getElementById('v-tsb').innerText = Math.round(last.tsb);
                 renderChart(data.reverse());
-            } else {
-                console.log("Menunggu data...");
             }
         }
-
         async function save() {
+            if(!uId) { alert("Please Sync Strava first!"); return; }
             const payload = {
                 user_id: uId, race_name: document.getElementById('in-name').value,
                 target_km: document.getElementById('in-km').value, race_date: document.getElementById('in-date').value
@@ -68,7 +66,6 @@
             await fetch('/api/save-strategy', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             location.reload();
         }
-
         function renderChart(data) {
             new Chart(document.getElementById('chart'), {
                 type: 'line',
