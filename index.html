@@ -1,25 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>ApexSync Dashboard</title>
+    <meta charset="UTF-8">
+    <title>ApexSync | Multi-Platform Bridge</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding-top: 50px; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 10px; display: inline-block; width: 300px; }
-        .btn { display: block; padding: 12px; margin: 10px 0; border-radius: 5px; text-decoration: none; color: white; font-weight: bold; }
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 50px; }
+        .card { background: #1e1e1e; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .btn { display: block; padding: 15px 30px; margin: 15px 0; border-radius: 8px; text-decoration: none; color: white; font-weight: bold; transition: 0.2s; }
         .strava { background: #FC4C02; }
         .suunto { background: #ff0000; }
-        .coros { background: #222; border: 1px solid #444; }
-        .garmin { background: #007CC3; }
+        .btn:hover { opacity: 0.8; transform: scale(1.02); }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>ApexSync 🏃‍♂️</h1>
-        <p>Connect your platforms:</p>
-        <a href="https://www.strava.com/oauth/authorize?client_id=ID&response_type=code&redirect_uri=https://apexsync.vercel.app/api&state=strava&scope=activity:read_all" class="btn strava">Connect Strava</a>
-        <a href="https://cloud-api.suunto.com/oauth/authorize?client_id=ID&response_type=code&redirect_uri=https://apexsync.vercel.app/api&state=suunto" class="btn suunto">Connect Suunto</a>
-        <a href="#" class="btn coros" onclick="alert('Manual connect for Coros')">Connect Coros</a>
-        <a href="#" class="btn garmin" onclick="alert('Garmin uses direct login')">Connect Garmin</a>
+        <h1>ApexSync Dashboard</h1>
+        <p>Hubungkan platform untuk sinkronisasi otomatis</p>
+        
+        <a href="https://www.strava.com/oauth/authorize?client_id=ID_STRAVA&response_type=code&redirect_uri=https://apexsync.vercel.app/api&state=strava&scope=activity:read_all" class="btn strava">Connect Strava</a>
+        
+        <a href="https://cloud-api.suunto.com/oauth/authorize?client_id=ID_SUUNTO&response_type=code&redirect_uri=https://apexsync.vercel.app/api&state=suunto" class="btn suunto">Connect Suunto</a>
     </div>
 </body>
 </html>
