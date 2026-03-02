@@ -2,244 +2,155 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apexnity | Athlete Dashboard</title>
+    <title>Apexnity | Athlete Commander</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --bg-color: #0b0e14;
-            --card-bg: #161b22;
-            --border-color: #30363d;
-            --text-main: #c9d1d9;
-            --accent-cyan: #00f2ff;
-            --accent-orange: #ff9f1c;
-            --accent-red: #ff4d4d;
-            --accent-green: #2ecc71;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            max-width: 1400px;
-            margin: auto;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 16px;
-        }
-
-        .card-title {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        /* Running Fitness Gauge Style */
-        .fitness-score {
-            text-align: center;
-            padding: 20px 0;
-        }
-        .score-value {
-            font-size: 48px;
-            font-weight: 800;
-            color: white;
-        }
-
-        /* Status & Recovery Styles */
-        .status-badge {
-            color: var(--accent-orange);
-            font-size: 20px;
-            font-weight: bold;
-        }
-        .metric-sub {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-            font-size: 12px;
-        }
-
-        /* Table Styles */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        th {
-            text-align: left;
-            color: #8b949e;
-            padding-bottom: 10px;
-            font-weight: 400;
-        }
-        td {
-            padding: 8px 0;
-            border-bottom: 1px solid #21262d;
-        }
-
-        .zone-pill {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-        }
-
-        /* Layout Positions */
-        .span-2 { grid-column: span 2; }
-        
-        .btn-sync {
-            grid-column: span 4;
-            background: #fc4c02;
-            color: white;
-            text-align: center;
-            padding: 10px;
-            text-decoration: none;
-            font-weight: bold;
-            border-radius: 4px;
-        }
+        :root { --bg: #0b0e14; --card: #161b22; --border: #30363d; --text: #c9d1d9; --cyan: #00f2ff; --orange: #ff9f1c; --red: #ff4d4d; --green: #2ecc71; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; font-size: 13px; }
+        .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; max-width: 1400px; margin: auto; }
+        .card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 4px; }
+        .card-h { font-size: 12px; font-weight: bold; color: #8b949e; margin-bottom: 10px; text-transform: uppercase; }
+        .big-val { font-size: 42px; font-weight: 800; color: white; text-align: center; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 6px 0; border-bottom: 1px solid #21262d; }
+        .zone-p { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .btn-sync { grid-column: span 4; background: #fc4c02; color: white; text-align: center; padding: 12px; text-decoration: none; font-weight: bold; border-radius: 4px; }
     </style>
 </head>
 <body>
 
-<div class="dashboard-grid">
+<div class="dashboard">
     <div class="card">
-        <div class="card-title">Running Fitness ℹ️</div>
-        <div class="fitness-score">
-            <div class="score-value" id="v-ctl">88.7</div>
-            <small>Base Fitness</small>
-        </div>
-        <div class="metric-sub"><span>Endurance</span><span>04'54" - 05'54"</span></div>
-        <div class="metric-sub"><span>Threshold</span><span>04'08" - 04'31"</span></div>
+        <div class="card-h">Running Fitness</div>
+        <div class="big-val" id="ctl-val">0</div>
+        <div id="pace-zones-summary"></div>
     </div>
 
     <div class="card">
-        <div class="card-title">Training Status ℹ️</div>
-        <div class="status-badge">Optimized</div>
-        <p style="font-size: 12px; line-height: 1.4;">You've been training regularly... fitness levels are rapidly improving.</p>
-        <div class="metric-sub">
-            <div>Load Impact<br><b style="font-size:16px;">93</b></div>
-            <div>Base Fitness<br><b style="font-size:16px;">87</b></div>
-            <div>Intensity Trend<br><b style="font-size:16px; color:var(--accent-green);">106%</b></div>
+        <div class="card-h">Training Status</div>
+        <div id="status-text" style="color:var(--cyan); font-size:18px; font-weight:bold;">Analyzing...</div>
+        <div style="display:flex; justify-content:space-between; margin-top:15px;">
+            <div>Impact (ATL)<br><b id="atl-val" style="font-size:16px;">0</b></div>
+            <div>Trend<br><b id="trend-val" style="font-size:16px;">0%</b></div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-title">7-Day Efficiency ℹ️</div>
-        <canvas id="efficiencyChart" height="150"></canvas>
+    <div class="card span-2">
+        <div class="card-h">Weekly Volume (KM)</div>
+        <canvas id="weeklyChart" height="100"></canvas>
     </div>
 
     <div class="card">
-        <div class="card-title">Recent Activities</div>
+        <div class="card-h">Recent Activities</div>
+        <table id="act-table"></table>
+    </div>
+
+    <div class="card">
+        <div class="card-h">Personal Records</div>
         <table>
-            <thead><tr><th>Date</th><th>Volume</th><th>Intensity</th></tr></thead>
-            <tbody id="activity-list">
-                </tbody>
+            <tr><td>Longest Run</td><td id="pr-dist" style="text-align:right">-</td></tr>
+            <tr><td>Max Elev Gain</td><td id="pr-elev" style="text-align:right">-</td></tr>
+            <tr><td>Best 5k</td><td id="pr-5k" style="text-align:right">-</td></tr>
         </table>
     </div>
 
     <div class="card">
-        <div class="card-title">Recovery</div>
-        <div style="text-align:center; padding: 20px;">
-            <div style="font-size:40px; font-weight:bold;">80%</div>
-            <small>21 hr(s) till full recovery</small>
-        </div>
+        <div class="card-h">Race Predictor</div>
+        <table id="race-table"></table>
     </div>
 
-    <div class="card">
-        <div class="card-title">Weekly Activity</div>
-        <canvas id="weeklyChart" height="150"></canvas>
+    <div class="card span-2">
+        <div class="card-h">Performance Management Chart (PMC)</div>
+        <canvas id="pmcChart" height="120"></canvas>
     </div>
 
-    <div class="card">
-        <div class="card-title">Threshold HR Zones</div>
-        <table>
-            <tr><td><span class="zone-pill" style="background:var(--accent-cyan)"></span>Aerobic Endur.</td><td>138 - 156</td></tr>
-            <tr><td><span class="zone-pill" style="background:var(--accent-orange)"></span>Threshold</td><td>165 - 176</td></tr>
-            <tr><td><span class="zone-pill" style="background:var(--accent-red)"></span>Anaerobic Power</td><td>> 183</td></tr>
-        </table>
-    </div>
-
-    <div class="card">
-        <div class="card-title">Race Predictor ℹ️</div>
-        <table>
-            <tr><td>5km</td><td>00:20:06</td><td>04'01"/km</td></tr>
-            <tr><td>10km</td><td>00:41:34</td><td>04'09"/km</td></tr>
-            <tr><td>Marathon</td><td>03:13:09</td><td>04'35"/km</td></tr>
-        </table>
-    </div>
-
-    <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api/metrics&scope=activity:read_all" class="btn-sync">SYNC WITH STRAVA</a>
+    <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api/metrics&scope=activity:read_all" class="btn-sync">SINKRONISASI DATA TERBARU</a>
 </div>
 
 <script>
-    async function loadData() {
+    async function init() {
         const res = await fetch('/api/metrics');
-        const data = await res.json();
+        const root = await res.json();
+        const data = root.metrics;
         
-        if(data && data.length > 0) {
+        if (data && data.length > 0) {
             const last = data[0];
-            document.getElementById('v-ctl').innerText = Math.round(last.ctl);
+            document.getElementById('ctl-val').innerText = Math.round(last.ctl);
+            document.getElementById('atl-val').innerText = Math.round(last.atl);
             
-            // Populate Recent Activities
-            const list = document.getElementById('activity-list');
-            data.slice(0, 5).forEach(act => {
-                const row = `<tr>
-                    <td>${new Date(act.record_date).toLocaleDateString('id-ID', {weekday:'short'})}</td>
-                    <td>11.01km</td>
-                    <td>07'03"/km</td>
-                </tr>`;
-                list.innerHTML += row;
+            // Logika Status
+            const trend = last.ctl > 0 ? Math.round((last.atl / last.ctl) * 100) : 0;
+            document.getElementById('trend-val').innerText = trend + "%";
+            document.getElementById('status-text').innerText = trend > 120 ? "Overreaching" : trend > 80 ? "Optimized" : "Recovery";
+
+            // Recent Activities (Dynamic)
+            const actTable = document.getElementById('act-table');
+            root.activities.forEach(a => {
+                const dist = (a.distance / 1000).toFixed(1);
+                const pace = formatPace(a.moving_time, a.distance);
+                actTable.innerHTML += `<tr><td>${new Date(a.start_date).toLocaleDateString('id-ID', {weekday:'short'})}</td><td>${dist}km</td><td style="text-align:right">${pace}</td></tr>`;
             });
 
-            renderEfficiencyChart();
-            renderWeeklyChart();
+            // Summary PRs
+            document.getElementById('pr-dist').innerText = (root.summary.max_dist / 1000).toFixed(2) + " km";
+            document.getElementById('pr-elev').innerText = Math.round(root.summary.max_elev) + " m";
+            document.getElementById('pr-5k').innerText = root.summary.best_5k ? formatTime(root.summary.best_5k) : "N/A";
+
+            // Race Predictor (Based on CTL)
+            // Rumus sederhana: Semakin tinggi CTL, semakin cepat pace dasar
+            const basePace = 360 - (last.ctl * 0.5); // detik per km
+            const raceTable = document.getElementById('race-table');
+            const races = [{n:'5k', d:5}, {n:'10k', d:10}, {n:'Half', d:21.1}, {n:'Full', d:42.2}];
+            races.forEach(r => {
+                const time = r.d * basePace;
+                raceTable.innerHTML += `<tr><td>${r.n}</td><td style="text-align:right">${formatTime(time)}</td></tr>`;
+            });
+
+            renderCharts(data, root.weekly);
         }
     }
 
-    function renderEfficiencyChart() {
-        new Chart(document.getElementById('efficiencyChart'), {
-            type: 'bar',
-            data: {
-                labels: ['T', 'W', 'T', 'F', 'S', 'S', 'M'],
-                datasets: [{
-                    data: [100, 0, 0, 0, 0, 95, 100],
-                    backgroundColor: '#2ecc71',
-                    borderRadius: 2
-                }]
-            },
-            options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
-        });
+    function formatPace(time, dist) {
+        if(!dist) return "0'00\"";
+        const p = time / (dist / 1000);
+        const m = Math.floor(p / 60);
+        const s = Math.round(p % 60);
+        return `${m}'${s.toString().padStart(2,'0')}"`;
     }
 
-    function renderWeeklyChart() {
+    function formatTime(s) {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = Math.round(s % 60);
+        return h > 0 ? `${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}` : `${m}:${sec.toString().padStart(2,'0')}`;
+    }
+
+    function renderCharts(metrics, weekly) {
+        // PMC Chart
+        new Chart(document.getElementById('pmcChart'), {
+            type: 'line',
+            data: {
+                labels: metrics.map(m => new Date(m.record_date).toLocaleDateString()).reverse(),
+                datasets: [
+                    { label: 'Fitness', data: metrics.map(m => m.ctl).reverse(), borderColor: '#00f2ff', tension: 0.3, fill: false },
+                    { label: 'Fatigue', data: metrics.map(m => m.atl).reverse(), borderColor: '#ff4d4d', tension: 0.3, fill: false }
+                ]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+
+        // Weekly Chart
         new Chart(document.getElementById('weeklyChart'), {
             type: 'bar',
             data: {
-                labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
-                datasets: [{
-                    data: [5, 10, 0, 8, 12, 20, 0],
-                    backgroundColor: '#8b949e'
-                }]
+                labels: weekly.map(w => w.day),
+                datasets: [{ data: weekly.map(w => w.dist / 1000), backgroundColor: '#00f2ff' }]
             },
-            options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#21262d' } }, x: { grid: { display: false } } } }
+            options: { responsive: true, plugins: { legend: { display: false } } }
         });
     }
 
-    loadData();
+    init();
 </script>
 </body>
 </html>
