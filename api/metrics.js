@@ -11,38 +11,38 @@ module.exports = async (req, res) => {
   try {
     const client = await pool.connect();
     
-    // 1. Ambil Metrik untuk Grafik & Gauge (CTL, ATL, TSB)
+    // 1. Data Metrik (CTL, ATL, TSB)
     const metrics = await client.query("SELECT * FROM user_metrics ORDER BY record_date DESC LIMIT 90");
     
-    // 2. Ambil Aktivitas Terbaru (Recent Activities)
-    const recentActivities = await client.query("SELECT * FROM activities ORDER BY start_date DESC LIMIT 10");
+    // 2. Data Aktivitas Terbaru dengan Tipe & Training Load
+    const recentActivities = await client.query(`
+      SELECT title, distance, moving_time, tss as training_load, start_date, type 
+      FROM activities ORDER BY start_date DESC LIMIT 7
+    `);
     
-    // 3. Ambil Rekor Pribadi (Personal Records)
+    // 3. Rekor Pribadi (PR)
     const prs = await client.query(`
       SELECT 
         MAX(distance) as max_dist, 
         MAX(total_elevation_gain) as max_elev,
-        MIN(CASE WHEN distance >= 990 AND distance <= 1100 THEN moving_time END) as best_1k,
-        MIN(CASE WHEN distance >= 4900 AND distance <= 5100 THEN moving_time END) as best_5k
+        MIN(CASE WHEN distance BETWEEN 950 AND 1050 THEN moving_time END) as best_1k,
+        MIN(CASE WHEN distance BETWEEN 4900 AND 5100 THEN moving_time END) as best_5k,
+        MIN(CASE WHEN distance BETWEEN 9900 AND 10100 THEN moving_time END) as best_10k
       FROM activities
     `);
 
-    // 4. Ambil Data Mingguan (Weekly Activity)
+    // 4. Weekly Volume
     const weekly = await client.query(`
-      SELECT 
-        to_char(start_date, 'Dy') as day, 
-        SUM(distance) as dist 
-      FROM activities 
-      WHERE start_date > NOW() - INTERVAL '7 days'
+      SELECT to_char(start_date, 'Dy') as day, SUM(distance) as dist 
+      FROM activities WHERE start_date > NOW() - INTERVAL '7 days'
       GROUP BY day, start_date ORDER BY start_date ASC
     `);
 
     client.release();
-    
     return res.status(200).json({
       metrics: metrics.rows,
       activities: recentActivities.rows,
-      summary: prs.rows[0],
+      prs: prs.rows[0],
       weekly: weekly.rows
     });
   } catch (e) {
