@@ -1,11 +1,8 @@
 {
   "name": "apexsync",
   "version": "1.0.0",
-  "scripts": {
-    "start": "node api/index.js"
-  },
+  "main": "api/index.js",
   "dependencies": {
     "pg": "^8.11.3"
   }
-
 }
