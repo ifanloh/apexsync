@@ -43,3 +43,46 @@ export default async function handler(req, res) {
     return res.status(405).json({ status: "error", pesan: "Cuma nerima method POST ya!" });
   }
 }
+// Tambahkan library axios di package.json
+const axios = require('axios');
+
+// ... (kode koneksi pool yang kemarin) ...
+
+module.exports = async (req, res) => {
+  // ... (header CORS kemarin) ...
+
+  // 1. LOGIKA UNTUK MENERIMA CALLBACK OAUTH (Contoh: Strava)
+  if (req.method === 'GET' && req.query.code) {
+    const { code, state } = req.query; // 'state' bisa dipakai buat tahu ini platform apa
+
+    try {
+      // Tukar "code" jadi "access_token" (Contoh ke Strava)
+      const response = await axios.post('https://www.strava.com/oauth/token', {
+        client_id: process.env.STRAVA_CLIENT_ID,
+        client_secret: process.env.STRAVA_CLIENT_SECRET,
+        code: code,
+        grant_type: 'authorization_code'
+      });
+
+      const { access_token, refresh_token, athlete } = response.data;
+
+      // Simpan ke database Neon kamu
+      const client = await pool.connect();
+      await client.query(
+        'INSERT INTO connected_platforms(user_id, platform_name, access_token) VALUES($1, $2, $3)',
+        [athlete.id.toString(), 'strava', access_token]
+      );
+      client.release();
+
+      return res.send("<h1>Mantap! Strava Berhasil Terhubung ke ApexSync.</h1>");
+    } catch (error) {
+      return res.status(500).send("Gagal tukar token: " + error.message);
+    }
+  }
+
+  // 2. LOGIKA POST (yang kemarin buat tes manual)
+  if (req.method === 'POST') {
+     // ... kode POST kemarin ...
+  }
+};
+
