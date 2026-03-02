@@ -10,8 +10,20 @@
 <body>
     <h1>ApexSync 🏃‍♂️</h1>
     <p>Sinkronisasi otomatis aktivitas lari ultra-trail kamu.</p>
-    <br>
-    <a href="#" class="btn">Connect with STRAVA</a>
-    <p id="status">Status: Ready to Sync</p>
+    <div class="sync-options">
+    <a href="https://www.strava.com/oauth/authorize?client_id=ID_KAMU&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=activity:read_all" class="btn btn-strava">Connect Strava</a>
+    
+    <a href="#" class="btn btn-suunto">Connect Suunto</a>
+    <a href="#" class="btn btn-coros">Connect Coros</a>
+    <a href="#" class="btn btn-garmin">Connect Garmin</a>
+</div>
+
+<style>
+    .sync-options { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+    .btn-strava { background: #FC4C02; }
+    .btn-suunto { background: #FF0000; }
+    .btn-coros { background: #222222; border: 1px solid #555; }
+    .btn-garmin { background: #007CC3; }
+</style>
 </body>
 </html>
