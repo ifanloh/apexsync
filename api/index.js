@@ -6,7 +6,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// FUNGSI MASAK DATA: Logika Hapus-Lalu-Input (Anti Error)
+// FUNGSI MASAK DATA: Hapus dulu baru Input (Anti Error Constraint)
 async function calculateMetrics(userId) {
   const client = await pool.connect();
   try {
@@ -22,7 +22,7 @@ async function calculateMetrics(userId) {
       atl = atl + (tss - atl) / 7;
       const tsb = ctl - atl;
 
-      // JURUS PAMUNGKAS: Hapus dulu data lama di tanggal ini, baru masukkan yang baru
+      // Hapus data lama di tanggal yang sama agar tidak double
       await client.query("DELETE FROM user_metrics WHERE user_id = $1 AND record_date = $2", [userId, act.start_date]);
       
       await client.query(
@@ -38,12 +38,13 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { url, query, method } = req;
+  const { url, query, method, body } = req;
 
   try {
-    // 1. AMBIL DATA DASHBOARD
+    // 1. ENDPOINT AMBIL DATA
     if (url.includes('/api/metrics')) {
       const client = await pool.connect();
       const result = await client.query(`
@@ -55,9 +56,9 @@ module.exports = async (req, res) => {
       return res.json(result.rows);
     }
 
-    // 2. SIMPAN STRATEGY
+    // 2. ENDPOINT SIMPAN STRATEGY
     if (method === 'POST' && url.includes('/api/save-strategy')) {
-      const { user_id, race_name, target_km, race_date, gpx_content } = req.body;
+      const { user_id, race_name, target_km, race_date, gpx_content } = body;
       const client = await pool.connect();
       await client.query(
         `UPDATE connected_platforms SET race_name = $1, target_km = $2, race_date = $3, gpx_data = $4 WHERE user_id = $5`,
@@ -67,7 +68,7 @@ module.exports = async (req, res) => {
       return res.json({ status: "success" });
     }
 
-    // 3. STRAVA SYNC
+    // 3. STRAVA SYNC (VERSI TOTAL NO-CONFLICT)
     if (query && query.code) {
       const tokenRes = await axios.post('https://www.strava.com/oauth/token', {
         client_id: process.env.STRAVA_CLIENT_ID,
@@ -83,21 +84,27 @@ module.exports = async (req, res) => {
       });
       
       const client = await pool.connect();
-      await client.query("INSERT INTO connected_platforms (user_id, platform_name) VALUES ($1, 'strava') ON CONFLICT (user_id) DO NOTHING", [uid]);
+      
+      // Simpan User (Hapus dulu baru insert biar gak error)
+      await client.query("DELETE FROM connected_platforms WHERE user_id = $1", [uid]);
+      await client.query("INSERT INTO connected_platforms (user_id, platform_name) VALUES ($1, 'strava')", [uid]);
 
       for (const act of actRes.data) {
         const isTrail = act.total_elevation_gain > (act.distance / 1000) * 10;
         const tss = (act.moving_time / 3600) * (isTrail ? 0.95 : 0.85) * 100;
-        // Gunakan ON CONFLICT untuk activities karena activity_id Strava itu unik & pasti
+        
+        // HAPUS DULU AKTIVITAS LAMA (Biar gak conflict)
+        await client.query("DELETE FROM activities WHERE activity_id = $1", [act.id.toString()]);
+        
         await client.query(
           `INSERT INTO activities (user_id, activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date, type)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (activity_id) DO NOTHING`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [uid, act.id.toString(), act.name, act.distance, act.moving_time, act.total_elevation_gain, tss, act.start_date, isTrail ? 'Trail' : 'Road']
         );
       }
       client.release();
       
-      // Jalankan hitungan metrics
+      // Hitung Metrics
       await calculateMetrics(uid);
       
       return res.send("<script>window.location.href='/'</script>");
