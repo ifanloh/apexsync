@@ -9,61 +9,48 @@ const pool = new Pool({
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  const { url, method, query } = req;
 
-  const { code, state } = req.query; // state: 'strava' atau 'suunto'
+  // Endpoint 1: Ambil Data Grafik Performance Management Chart (PMC)
+  if (method === 'GET' && url.includes('/api/metrics')) {
+    const client = await pool.connect();
+    const result = await client.query("SELECT * FROM user_metrics ORDER BY record_date DESC LIMIT 30");
+    client.release();
+    return res.json(result.rows);
+  }
 
-  if (req.method === 'GET' && code) {
+  // Endpoint 2: Handle OAuth Strava
+  if (method === 'GET' && query.code) {
     try {
-      let platform = state || 'strava';
-      let tokenUrl, clientId, clientSecret;
-
-      if (platform === 'strava') {
-        tokenUrl = 'https://www.strava.com/oauth/token';
-        clientId = process.env.STRAVA_CLIENT_ID;
-        clientSecret = process.env.STRAVA_CLIENT_SECRET;
-      } else if (platform === 'suunto') {
-        tokenUrl = 'https://cloud-api.suunto.com/oauth/token';
-        clientId = process.env.SUUNTO_CLIENT_ID;
-        clientSecret = process.env.SUUNTO_CLIENT_SECRET;
-      }
-
-      // Tukar code jadi Token
-      const response = await axios.post(tokenUrl, {
-        client_id: clientId,
-        client_secret: clientSecret,
-        code: code,
+      const tokenRes = await axios.post('https://www.strava.com/oauth/token', {
+        client_id: process.env.STRAVA_CLIENT_ID,
+        client_secret: process.env.STRAVA_CLIENT_SECRET,
+        code: query.code,
         grant_type: 'authorization_code'
       });
 
-      const { access_token, refresh_token } = response.data;
-      const remote_user_id = (platform === 'strava') ? response.data.athlete.id.toString() : response.data.user_id;
+      const { access_token, athlete } = tokenRes.data;
+      const actRes = await axios.get('https://www.strava.com/api/v3/athlete/activities?per_page=10', {
+        headers: { 'Authorization': `Bearer ${access_token}` }
+      });
 
       const client = await pool.connect();
-      // Simpan ke database (Satu User ID Muhammad Ma'mun Hariri bisa punya banyak platform)
-      await client.query(
-        `INSERT INTO connected_platforms (user_id, platform_name, access_token, refresh_token) 
-         VALUES ($1, $2, $3, $4) 
-         ON CONFLICT (user_id, platform_name) 
-         DO UPDATE SET access_token = $3, refresh_token = $4, created_at = CURRENT_TIMESTAMP`,
-        [remote_user_id, platform, access_token, refresh_token]
-      );
-      client.release();
+      for (const act of actRes.data) {
+        // Rumus TSS Sederhana: (Moving Time / 3600) * (Intensity Factor^2) * 100
+        // Sementara kita pakai konstanta intensitas 85% untuk ultra trail
+        const tss = (act.moving_time / 3600) * 0.85 * 100;
 
-      return res.send(`
-        <div style="font-family:sans-serif; text-align:center; padding:50px; background:#121212; color:white; height:100vh;">
-          <h1 style="color:#00ff88;">${platform.toUpperCase()} Berhasil Terhubung!</h1>
-          <p>ApexSync sudah mengamankan kunci akses kamu.</p>
-          <a href="/" style="color:#aaa; text-decoration:none;">Kembali ke Dashboard</a>
-        </div>
-      `);
-    } catch (error) {
-      console.error(error.response?.data || error.message);
-      return res.status(500).send("Gagal menyambungkan platform: " + error.message);
-    }
+        await client.query(
+          `INSERT INTO activities (user_id, activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (activity_id) DO NOTHING`,
+          [athlete.id.toString(), act.id.toString(), act.name, act.distance, act.moving_time, act.total_elevation_gain, tss, act.start_date]
+        );
+      }
+      client.release();
+      return res.send("<script>window.location.href='/'</script>");
+    } catch (e) { return res.status(500).json({ error: e.message }); }
   }
 
-  return res.status(200).json({ status: "ready", service: "ApexSync Universal" });
+  return res.status(200).json({ status: "Apexnity Engine Running" });
 };
