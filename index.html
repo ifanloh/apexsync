@@ -2,151 +2,174 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Apexnity | Athlete Commander</title>
+    <title>Apexnity | Pro Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --bg: #0b0e14; --card: #161b22; --border: #30363d; --text: #c9d1d9; --cyan: #00f2ff; --orange: #ff9f1c; --red: #ff4d4d; --green: #2ecc71; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; font-size: 13px; }
-        .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; max-width: 1400px; margin: auto; }
-        .card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 4px; }
-        .card-h { font-size: 12px; font-weight: bold; color: #8b949e; margin-bottom: 10px; text-transform: uppercase; }
-        .big-val { font-size: 42px; font-weight: 800; color: white; text-align: center; margin: 10px 0; }
-        table { width: 100%; border-collapse: collapse; }
-        td { padding: 6px 0; border-bottom: 1px solid #21262d; }
-        .zone-p { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-        .btn-sync { grid-column: span 4; background: #fc4c02; color: white; text-align: center; padding: 12px; text-decoration: none; font-weight: bold; border-radius: 4px; }
+        :root {
+            --bg: #0b0e14; --card: #161b22; --border: #30363d; --text: #c9d1d9;
+            --cyan: #00f2ff; --orange: #ff9f1c; --red: #ff4d4d; --green: #2ecc71;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; font-size: 12px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 1400px; margin: auto; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 12px; position: relative; }
+        .card-title { font-size: 11px; font-weight: 600; color: #8b949e; margin-bottom: 12px; display: flex; align-items: center; gap: 5px; }
+        
+        /* Fitness Gauge */
+        .fitness-val { font-size: 38px; font-weight: 800; color: white; text-align: center; margin-top: 10px; }
+        .zone-bar { height: 4px; background: #21262d; border-radius: 2px; margin: 8px 0; overflow: hidden; position: relative; }
+        .zone-fill { height: 100%; background: var(--orange); }
+
+        /* Activities Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        th { text-align: left; color: #8b949e; font-weight: 400; padding-bottom: 8px; border-bottom: 1px solid #21262d; }
+        td { padding: 8px 0; border-bottom: 1px solid #21262d; vertical-align: middle; }
+        .icon-box { display: flex; align-items: center; justify-content: center; width: 20px; color: var(--orange); }
+
+        /* Recovery Body */
+        .recovery-man { font-size: 40px; text-align: center; margin: 10px 0; color: #8b949e; }
+        .recovery-bar { height: 6px; background: linear-gradient(to right, var(--red), var(--orange), var(--green), var(--cyan)); border-radius: 3px; margin-top: 15px; position: relative; }
+        .recovery-pointer { position: absolute; top: -8px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 8px solid white; }
+
+        .span-2 { grid-column: span 2; }
     </style>
 </head>
 <body>
 
-<div class="dashboard">
+<div class="grid">
     <div class="card">
-        <div class="card-h">Running Fitness</div>
-        <div class="big-val" id="ctl-val">0</div>
-        <div id="pace-zones-summary"></div>
-    </div>
-
-    <div class="card">
-        <div class="card-h">Training Status</div>
-        <div id="status-text" style="color:var(--cyan); font-size:18px; font-weight:bold;">Analyzing...</div>
-        <div style="display:flex; justify-content:space-between; margin-top:15px;">
-            <div>Impact (ATL)<br><b id="atl-val" style="font-size:16px;">0</b></div>
-            <div>Trend<br><b id="trend-val" style="font-size:16px;">0%</b></div>
+        <div class="card-title">Running Fitness <i data-lucide="info" size="12"></i></div>
+        <div class="fitness-val" id="v-ctl">0</div>
+        <div style="margin-top:20px;">
+            <div class="metric-sub"><small>Endurance</small> <span style="float:right">04'54" - 05'54"</span></div>
+            <div class="zone-bar"><div class="zone-fill" style="width: 80%"></div></div>
+            <div class="metric-sub"><small>Threshold</small> <span style="float:right">04'08" - 04'31"</span></div>
+            <div class="zone-bar"><div class="zone-fill" style="width: 70%"></div></div>
         </div>
     </div>
 
-    <div class="card span-2">
-        <div class="card-h">Weekly Volume (KM)</div>
-        <canvas id="weeklyChart" height="100"></canvas>
+    <div class="card">
+        <div class="card-title">Training Status <i data-lucide="info" size="12"></i></div>
+        <div style="color:var(--orange); font-size:18px; font-weight:bold; margin-bottom:10px;">Optimized</div>
+        <p style="font-size:11px; line-height:1.4; color:#8b949e;">Latihan kamu teratur... tingkat kebugaran meningkat dengan cepat.</p>
+        <div style="display:flex; justify-content:space-between; margin-top:15px; text-align:center;">
+            <div><small>Load Impact</small><br><b id="v-atl" style="font-size:16px;">0</b></div>
+            <div><small>Base Fitness</small><br><b id="v-ctl-small" style="font-size:16px;">0</b></div>
+            <div><small>Intensity</small><br><b id="v-trend" style="font-size:16px; color:var(--green);">0%</b></div>
+        </div>
     </div>
 
     <div class="card">
-        <div class="card-h">Recent Activities</div>
-        <table id="act-table"></table>
+        <div class="card-title">Weekly Activity <i data-lucide="info" size="12"></i></div>
+        <canvas id="weeklyChart" height="150"></canvas>
     </div>
 
     <div class="card">
-        <div class="card-h">Personal Records</div>
+        <div class="card-title">Recent Activities</div>
         <table>
-            <tr><td>Longest Run</td><td id="pr-dist" style="text-align:right">-</td></tr>
-            <tr><td>Max Elev Gain</td><td id="pr-elev" style="text-align:right">-</td></tr>
-            <tr><td>Best 5k</td><td id="pr-5k" style="text-align:right">-</td></tr>
+            <thead><tr><th>Type</th><th>Date</th><th>Volume</th><th>Load</th></tr></thead>
+            <tbody id="act-body"></tbody>
         </table>
     </div>
 
     <div class="card">
-        <div class="card-h">Race Predictor</div>
+        <div class="card-title">Recovery</div>
+        <div class="recovery-man" id="rec-val">80%</div>
+        <div style="text-align:center;"><small id="rec-hours">21 hr(s) till full recovery</small></div>
+        <div class="recovery-bar">
+            <div class="recovery-pointer" id="rec-pointer" style="left: 80%;"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Threshold Pace Zones <i data-lucide="info" size="12"></i></div>
+        <div style="font-size:14px; margin-bottom:10px;">Threshold Pace <b>04'13"</b></div>
+        <table style="font-size:11px;">
+            <tr><td><span style="color:var(--cyan)">●</span> Recovery</td><td style="text-align:right">> 05'54"</td></tr>
+            <tr><td><span style="color:var(--green)">●</span> Aerobic Endurance</td><td style="text-align:right">04'54" - 05'54"</td></tr>
+            <tr><td><span style="color:var(--orange)">●</span> Threshold</td><td style="text-align:right">04'08" - 04'31"</td></tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <div class="card-h">Personal Running Record</div>
+        <table id="pr-table"></table>
+    </div>
+
+    <div class="card">
+        <div class="card-h">Race Predictor <i data-lucide="info" size="12"></i></div>
         <table id="race-table"></table>
     </div>
-
-    <div class="card span-2">
-        <div class="card-h">Performance Management Chart (PMC)</div>
-        <canvas id="pmcChart" height="120"></canvas>
-    </div>
-
-    <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api/metrics&scope=activity:read_all" class="btn-sync">SINKRONISASI DATA TERBARU</a>
 </div>
 
 <script>
     async function init() {
         const res = await fetch('/api/metrics');
-        const root = await res.json();
-        const data = root.metrics;
+        const data = await res.json();
         
-        if (data && data.length > 0) {
-            const last = data[0];
-            document.getElementById('ctl-val').innerText = Math.round(last.ctl);
-            document.getElementById('atl-val').innerText = Math.round(last.atl);
+        if (data.metrics && data.metrics.length > 0) {
+            const last = data.metrics[0];
+            document.getElementById('v-ctl').innerText = Math.round(last.ctl);
+            document.getElementById('v-ctl-small').innerText = Math.round(last.ctl);
+            document.getElementById('v-atl').innerText = Math.round(last.atl);
             
-            // Logika Status
             const trend = last.ctl > 0 ? Math.round((last.atl / last.ctl) * 100) : 0;
-            document.getElementById('trend-val').innerText = trend + "%";
-            document.getElementById('status-text').innerText = trend > 120 ? "Overreaching" : trend > 80 ? "Optimized" : "Recovery";
+            document.getElementById('v-trend').innerText = trend + "%";
 
-            // Recent Activities (Dynamic)
-            const actTable = document.getElementById('act-table');
-            root.activities.forEach(a => {
-                const dist = (a.distance / 1000).toFixed(1);
-                const pace = formatPace(a.moving_time, a.distance);
-                actTable.innerHTML += `<tr><td>${new Date(a.start_date).toLocaleDateString('id-ID', {weekday:'short'})}</td><td>${dist}km</td><td style="text-align:right">${pace}</td></tr>`;
+            // Recent Activities with Logic Icons
+            const actBody = document.getElementById('act-body');
+            data.activities.forEach(a => {
+                let icon = 'run';
+                if(a.type === 'Ride') icon = 'bike';
+                if(a.type === 'WeightTraining') icon = 'dumbbell';
+                
+                actBody.innerHTML += `<tr>
+                    <td class="icon-box"><i data-lucide="${icon}" size="14"></i></td>
+                    <td>${new Date(a.start_date).toLocaleDateString('id-ID', {weekday:'short'})}</td>
+                    <td>${(a.distance/1000).toFixed(1)}km</td>
+                    <td style="color:white; font-weight:bold;">${Math.round(a.training_load)}TL</td>
+                </tr>`;
             });
 
-            // Summary PRs
-            document.getElementById('pr-dist').innerText = (root.summary.max_dist / 1000).toFixed(2) + " km";
-            document.getElementById('pr-elev').innerText = Math.round(root.summary.max_elev) + " m";
-            document.getElementById('pr-5k').innerText = root.summary.best_5k ? formatTime(root.summary.best_5k) : "N/A";
+            // PR Table
+            const pr = data.prs;
+            const prTable = document.getElementById('pr-table');
+            prTable.innerHTML = `
+                <tr><td>Longest Run</td><td style="text-align:right">${(pr.max_dist/1000).toFixed(2)}km</td></tr>
+                <tr><td>Max Elev Gain</td><td style="text-align:right">${Math.round(pr.max_elev)}m</td></tr>
+                <tr><td>Best 5k</td><td style="text-align:right">${formatTime(pr.best_5k)}</td></tr>
+            `;
 
-            // Race Predictor (Based on CTL)
-            // Rumus sederhana: Semakin tinggi CTL, semakin cepat pace dasar
-            const basePace = 360 - (last.ctl * 0.5); // detik per km
+            // Race Predictor
+            const basePace = 253 - (last.ctl * 0.4); // Rumus estimasi pace marathon
             const raceTable = document.getElementById('race-table');
-            const races = [{n:'5k', d:5}, {n:'10k', d:10}, {n:'Half', d:21.1}, {n:'Full', d:42.2}];
+            const races = [{n:'5km', d:5}, {n:'10km', d:10}, {n:'Marathon', d:42.2}];
             races.forEach(r => {
                 const time = r.d * basePace;
                 raceTable.innerHTML += `<tr><td>${r.n}</td><td style="text-align:right">${formatTime(time)}</td></tr>`;
             });
 
-            renderCharts(data, root.weekly);
+            lucide.createIcons();
+            renderWeeklyChart(data.weekly);
         }
     }
 
-    function formatPace(time, dist) {
-        if(!dist) return "0'00\"";
-        const p = time / (dist / 1000);
-        const m = Math.floor(p / 60);
-        const s = Math.round(p % 60);
-        return `${m}'${s.toString().padStart(2,'0')}"`;
-    }
-
     function formatTime(s) {
+        if(!s) return "-";
         const h = Math.floor(s / 3600);
         const m = Math.floor((s % 3600) / 60);
         const sec = Math.round(s % 60);
         return h > 0 ? `${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}` : `${m}:${sec.toString().padStart(2,'0')}`;
     }
 
-    function renderCharts(metrics, weekly) {
-        // PMC Chart
-        new Chart(document.getElementById('pmcChart'), {
-            type: 'line',
-            data: {
-                labels: metrics.map(m => new Date(m.record_date).toLocaleDateString()).reverse(),
-                datasets: [
-                    { label: 'Fitness', data: metrics.map(m => m.ctl).reverse(), borderColor: '#00f2ff', tension: 0.3, fill: false },
-                    { label: 'Fatigue', data: metrics.map(m => m.atl).reverse(), borderColor: '#ff4d4d', tension: 0.3, fill: false }
-                ]
-            },
-            options: { responsive: true, plugins: { legend: { display: false } } }
-        });
-
-        // Weekly Chart
+    function renderWeeklyChart(weekly) {
         new Chart(document.getElementById('weeklyChart'), {
             type: 'bar',
             data: {
-                labels: weekly.map(w => w.day),
-                datasets: [{ data: weekly.map(w => w.dist / 1000), backgroundColor: '#00f2ff' }]
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{ data: [5, 12, 0, 8, 15, 21, 0], backgroundColor: '#00f2ff', borderRadius: 2 }]
             },
-            options: { responsive: true, plugins: { legend: { display: false } } }
+            options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
         });
     }
 
