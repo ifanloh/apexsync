@@ -43,12 +43,16 @@ module.exports = async (req, res) => {
 
       client = await pool.connect();
       
-      // Update data atlet (Sekarang laci display_name sudah ada)
-      await client.query(
-        "INSERT INTO connected_platforms (user_id, platform_name, display_name) VALUES ($1, 'strava', $2) ON CONFLICT (user_id) DO UPDATE SET display_name = $2", 
-        [uid, athleteName]
-      );
+      // MANUAL UPSERT: Cek dulu baru Insert/Update (Gak pake ON CONFLICT lagi)
+      const userCheck = await client.query("SELECT user_id FROM connected_platforms WHERE user_id = $1", [uid]);
+      
+      if (userCheck.rows.length > 0) {
+        await client.query("UPDATE connected_platforms SET display_name = $1, platform_name = 'strava' WHERE user_id = $2", [athleteName, uid]);
+      } else {
+        await client.query("INSERT INTO connected_platforms (user_id, platform_name, display_name) VALUES ($1, 'strava', $2)", [uid, athleteName]);
+      }
 
+      // Ambil Aktivitas
       const actRes = await axios.get('https://www.strava.com/api/v3/athlete/activities?per_page=100', { 
         headers: { 'Authorization': `Bearer ${access_token}` } 
       });
