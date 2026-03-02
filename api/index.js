@@ -1,41 +1,37 @@
-const { Pool } = require('pg');
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
+// Tambahkan di dalam module.exports api/index.js kamu
 
-module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+if (method === 'POST' && url.includes('/api/generate-plan')) {
+  try {
+    const { user_id, target_km, target_type, days_left } = req.body;
+    
+    // Logika Sederhana AI Planner:
+    // Minggu ini lari 40% dari target, naik 10% tiap minggu sampai puncak 3 minggu sebelum race.
+    const weekly_target = target_km * 0.5; // Contoh: target 116km, minggu ini lari total 58km
+    
+    const plan = {
+      mon: "Rest Day / Mobility",
+      tue: `Easy Run: ${Math.round(weekly_target * 0.2)}km`,
+      wed: `Strength & Hills: ${Math.round(weekly_target * 0.15)}km`,
+      thu: `Tempo Run: ${Math.round(weekly_target * 0.2)}km`,
+      fri: "Rest Day",
+      sat: `Long Run: ${Math.round(weekly_target * 0.45)}km`,
+      sun: "Recovery Walk / Rest"
+    };
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
+    const client = await pool.connect();
+    await client.query(
+      "INSERT INTO training_plans (user_id, week_start, plan_json) VALUES ($1, CURRENT_DATE, $2)",
+      [user_id, JSON.stringify(plan)]
+    );
+    client.release();
+    return res.json({ status: "Plan Generated", plan });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
+}
 
-  const { url, method, body } = req;
-
-  if (method === 'POST' && url.includes('/api/save-strategy')) {
-    try {
-      const { 
-        user_id, race_name, target_km, target_type, 
-        race_date, target_finish, gpx_data, total_ascent 
-      } = req.body;
-
-      const client = await pool.connect();
-      await client.query(
-        `UPDATE connected_platforms 
-         SET race_name = $1, target_km = $2, target_type = $3, 
-             race_date = $4, target_finish_time = $5, gpx_data = $6, 
-             total_elevation_target = $7 
-         WHERE user_id = $8`,
-        [race_name, target_km, target_type, race_date, target_finish, gpx_data, total_ascent, user_id]
-      );
-      client.release();
-      return res.json({ status: "Strategy Locked!" });
-    } catch (e) {
-      return res.status(500).json({ error: e.message });
-    }
-  }
-  
-  // Endpoint metrics tetap menggunakan query JOIN seperti sebelumnya
-  return res.status(200).json({ status: "Apexnity Commander Active" });
-};
+// Endpoint buat ambil plan terakhir
+if (url.includes('/api/get-plan')) {
+  const client = await pool.connect();
+  const result = await client.query("SELECT * FROM training_plans WHERE user_id = $1 ORDER BY week_start DESC LIMIT 1", [query.user_id]);
+  client.release();
+  return res.json(result.rows[0] || {});
+}
