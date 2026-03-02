@@ -198,7 +198,7 @@
 
     async function init() {
         try {
-            const res = await fetch('/api/metrics');
+            const res = await fetch('/api/dashboard');
             const root = await res.json();
             
             // Debugging log - cek di browser console (F12)
