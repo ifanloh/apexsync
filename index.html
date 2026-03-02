@@ -1,7 +1,25 @@
-<div class="btn-group">
-    <a href="https://www.strava.com/oauth/authorize?client_id=ID&response_type=code&redirect_uri=https://apexsync.vercel.app/api&state=strava&scope=activity:read_all" class="btn strava">Connect Strava</a>
-    
-    <a href="https://cloud-api.suunto.com/oauth/authorize?client_id=ID&response_type=code&redirect_uri=https://apexsync.vercel.app/api&state=suunto" class="btn suunto">Connect Suunto</a>
-
-    <a href="https://garmin.com/oauth/..." class="btn garmin">Connect Garmin</a>
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ApexSync Dashboard</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding-top: 50px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 10px; display: inline-block; width: 300px; }
+        .btn { display: block; padding: 12px; margin: 10px 0; border-radius: 5px; text-decoration: none; color: white; font-weight: bold; }
+        .strava { background: #FC4C02; }
+        .suunto { background: #ff0000; }
+        .coros { background: #222; border: 1px solid #444; }
+        .garmin { background: #007CC3; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>ApexSync 🏃‍♂️</h1>
+        <p>Connect your platforms:</p>
+        <a href="https://www.strava.com/oauth/authorize?client_id=ID&response_type=code&redirect_uri=https://apexsync.vercel.app/api&state=strava&scope=activity:read_all" class="btn strava">Connect Strava</a>
+        <a href="https://cloud-api.suunto.com/oauth/authorize?client_id=ID&response_type=code&redirect_uri=https://apexsync.vercel.app/api&state=suunto" class="btn suunto">Connect Suunto</a>
+        <a href="#" class="btn coros" onclick="alert('Manual connect for Coros')">Connect Coros</a>
+        <a href="#" class="btn garmin" onclick="alert('Garmin uses direct login')">Connect Garmin</a>
+    </div>
+</body>
+</html>
