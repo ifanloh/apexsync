@@ -13,10 +13,9 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { url, method, body, query } = req;
+  const { url, method, query } = req;
 
   try {
-    // 1. SAVE STRATEGY & GPX
     if (method === 'POST' && url.includes('/api/save-strategy')) {
       const { user_id, race_name, target_km, target_type, race_date, target_finish, gpx_content, total_ascent } = req.body;
       const client = await pool.connect();
@@ -29,7 +28,6 @@ module.exports = async (req, res) => {
       return res.json({ status: "success" });
     }
 
-    // 2. GET METRICS & TARGETS
     if (url.includes('/api/metrics')) {
       const client = await pool.connect();
       const result = await client.query(`
@@ -40,7 +38,6 @@ module.exports = async (req, res) => {
       return res.json(result.rows);
     }
 
-    // 3. HANDLE STRAVA OAUTH
     if (query && query.code) {
       const tokenRes = await axios.post('https://www.strava.com/oauth/token', {
         client_id: process.env.STRAVA_CLIENT_ID,
@@ -54,8 +51,11 @@ module.exports = async (req, res) => {
       });
       const client = await pool.connect();
       for (const act of actRes.data) {
+        // Logika Road vs Trail
         const isTrail = act.total_elevation_gain > (act.distance / 1000) * 10;
         const tss = (act.moving_time / 3600) * (isTrail ? 0.95 : 0.85) * 100;
+        
+        // Error terjadi di sini karena kolom 'type' belum ada di DB
         await client.query(
           `INSERT INTO activities (user_id, activity_id, title, distance, moving_time, total_elevation_gain, tss, start_date, type)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (activity_id) DO NOTHING`,
@@ -67,5 +67,7 @@ module.exports = async (req, res) => {
     }
 
     return res.status(200).json({ status: "Apexnity Active" });
-  } catch (e) { return res.status(500).json({ error: e.message }); }
+  } catch (e) { 
+    return res.status(500).json({ error: e.message }); 
+  }
 };
