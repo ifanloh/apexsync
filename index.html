@@ -2,51 +2,45 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Apexnity | Commander</title>
+    <title>Apexnity | 116K Commander</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --bg: #0b0e14; --card: #161b22; --accent: #00f2ff; --border: #30363d; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; padding: 20px; }
-        .wrapper { display: grid; grid-template-columns: 1fr 300px; gap: 20px; max-width: 1200px; margin: auto; }
-        .panel { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
-        .stat-card { text-align: center; padding: 15px; background: #0d1117; border-radius: 8px; border: 1px solid var(--border); }
-        .stat-card div { font-size: 28px; font-weight: bold; color: white; margin-top: 5px; }
-        input { width: 100%; padding: 12px; background: #0d1117; border: 1px solid var(--border); color: white; margin: 10px 0; border-radius: 6px; box-sizing: border-box;}
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; margin: 0; padding: 20px; }
+        .wrapper { max-width: 1200px; margin: auto; display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .panel { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        .stat-card { background: #0d1117; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+        .stat-card div { font-size: 26px; font-weight: bold; color: white; margin-top: 5px; }
+        input { width: 100%; padding: 12px; background: #0d1117; border: 1px solid var(--border); color: white; margin-top: 10px; border-radius: 6px; box-sizing: border-box; }
         .btn-strava { display: block; text-align: center; background: #fc4c02; color: white; text-decoration: none; padding: 14px; border-radius: 6px; font-weight: bold; margin-top: 20px; }
-        .btn-save { width:100%; padding:14px; cursor:pointer; background:var(--accent); border:none; border-radius:6px; font-weight:bold; color:black; }
+        .btn-save { width: 100%; margin-top: 15px; padding: 14px; background: var(--accent); border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="wrapper">
         <div class="main">
             <div class="panel">
-                <h1 id="r-name" style="margin-top:0;">DASHBOARD LOADING...</h1>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                <h1 id="r-name" style="margin:0;">APEXNITY ACTIVE</h1>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;">
                     <div class="stat-card"><small>CTL (Fitness)</small><div id="v-ctl">0</div></div>
                     <div class="stat-card"><small>ATL (Fatigue)</small><div id="v-atl">0</div></div>
                     <div class="stat-card"><small>TSB (Form)</small><div id="v-tsb">0</div></div>
                 </div>
             </div>
-            <div id="debug-msg" style="background:#2a1a00; border:1px solid #ffa500; color:#ffa500; padding:15px; border-radius:8px; margin-top:20px; display:none;">
-                ⚠️ Data di database terdeteksi 0. Klik tombol <strong>Sync Strava</strong> di samping.
-            </div>
-            <div class="panel" style="margin-top:20px;">
-                <h3 style="margin-top:0">Training Load Trend</h3>
+            <div class="panel">
+                <h3 style="margin-top:0">Training Trend (Last 100 Runs)</h3>
                 <div style="height:350px;"><canvas id="chart"></canvas></div>
             </div>
         </div>
         <div class="side">
             <div class="panel">
                 <h3 style="margin-top:0">Race Strategy</h3>
-                <input type="text" id="in-name" placeholder="Race Name (e.g. Rinjani 100)">
+                <input type="text" id="in-name" placeholder="Race Name">
                 <input type="number" id="in-km" placeholder="Target KM">
                 <input type="date" id="in-date">
                 <button class="btn-save" onclick="save()">LOCK STRATEGY</button>
             </div>
             <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api&scope=activity:read_all" class="btn-strava">SYNC WITH STRAVA</a>
-            <div style="font-size:11px; margin-top:15px; color:#8b949e; text-align:center;">
-                Muhammad Ma'mun Hariri | Commander v1.0
-            </div>
         </div>
     </div>
 
@@ -56,29 +50,22 @@
             try {
                 const res = await fetch('/api/metrics');
                 const data = await res.json();
-                console.log("API Response:", data);
                 
-                if(!data || data.length === 0) {
-                    document.getElementById('r-name').innerText = "DATA NOT FOUND";
-                    document.getElementById('debug-msg').style.display = 'block';
-                    return;
+                if(data && data.length > 0) {
+                    const last = data[0];
+                    uId = last.user_id;
+                    document.getElementById('v-ctl').innerText = Math.round(last.ctl);
+                    document.getElementById('v-atl').innerText = Math.round(last.atl);
+                    document.getElementById('v-tsb').innerText = Math.round(last.tsb);
+                    renderChart(data.reverse());
+                } else {
+                    console.log("Menunggu data dari database...");
                 }
-
-                const last = data[0];
-                uId = last.user_id;
-                document.getElementById('r-name').innerText = last.race_name || "APEXNITY ACTIVE";
-                document.getElementById('v-ctl').innerText = Math.round(last.ctl);
-                document.getElementById('v-atl').innerText = Math.round(last.atl);
-                document.getElementById('v-tsb').innerText = Math.round(last.tsb);
-                renderChart(data.reverse());
-            } catch (e) {
-                document.getElementById('r-name').innerText = "SERVER ERROR";
-                console.error(e);
-            }
+            } catch (e) { console.error("Error loading data:", e); }
         }
 
         async function save() {
-            if(!uId) { alert("Sync Strava first to get your User ID!"); return; }
+            if(!uId) { alert("Klik Sync Strava dulu biar dapet User ID!"); return; }
             const payload = {
                 user_id: uId, race_name: document.getElementById('in-name').value,
                 target_km: document.getElementById('in-km').value, race_date: document.getElementById('in-date').value
@@ -92,16 +79,16 @@
                 type: 'line',
                 data: { 
                     labels: data.map(d => new Date(d.record_date).toLocaleDateString()), 
-                    datasets: [
-                        { label: 'Fitness (CTL)', data: data.map(d => d.ctl), borderColor: '#00f2ff', backgroundColor: 'rgba(0, 242, 255, 0.1)', fill: true, tension: 0.3 },
-                        { label: 'Fatigue (ATL)', data: data.map(d => d.atl), borderColor: '#ff3e3e', tension: 0.3 }
-                    ] 
+                    datasets: [{ 
+                        label: 'Fitness (CTL)', 
+                        data: data.map(d => d.ctl), 
+                        borderColor: '#00f2ff', 
+                        backgroundColor: 'rgba(0, 242, 255, 0.1)',
+                        fill: true,
+                        tension: 0.3 
+                    }] 
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    scales: { y: { grid: { color: '#30363d' } }, x: { grid: { display: false } } }
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
         load();
