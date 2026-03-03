@@ -307,8 +307,8 @@
         <div class="nav-item" onclick="switchPage('race')"><i class="fas fa-calendar-alt"></i> Race Target</div>
         <div class="nav-item" onclick="switchPage('strategy')"><i class="fas fa-map"></i> Strategy</div>
       </nav>
-      <!-- TOMBOL SYNC STRAVA (ganti YOUR_VERCEL_DOMAIN) -->
-      <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://YOUR_VERCEL_DOMAIN/api/metrics&scope=activity:read_all" class="btn-sync">
+      <!-- TOMBOL SYNC STRAVA (domain sudah disesuaikan) -->
+      <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api/metrics&scope=activity:read_all" class="btn-sync">
         <i class="fas fa-sync-alt"></i> <span>SYNC STRAVA</span>
       </a>
       <div class="user-chip">
@@ -525,12 +525,11 @@
 
         // Training Status
         let status = 'Optimized';
-        let loadImpact = 0;
         if (t.atl > t.ctl * 1.25) status = 'Overreaching';
         else if (t.tsb < -20) status = 'High Load';
         else if (t.tsb > 10) status = 'Fresh';
         document.getElementById('trainingStatus').innerText = status;
-        loadImpact = Math.round((t.atl / (t.ctl || 1)) * 100);
+        const loadImpact = Math.round((t.atl / (t.ctl || 1)) * 100);
         document.getElementById('loadImpact').innerText = loadImpact + '%';
         document.getElementById('loadBar').style.width = Math.min(loadImpact, 100) + '%';
 
