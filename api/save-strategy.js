@@ -28,14 +28,10 @@ module.exports = async (req, res) => {
   try {
     await client.query(
       `UPDATE connected_platforms
-       SET race_name=$1,
-           target_km=$2,
-           race_date=$3,
-           updated_at=now()
+       SET race_name=$1, target_km=$2, race_date=$3, updated_at=now()
        WHERE user_id=$4`,
       [race_name || null, target_km || null, race_date || null, user_id]
     );
-
     return res.json({ status: "success" });
   } catch (e) {
     return res.status(500).json({ error: e.message });
