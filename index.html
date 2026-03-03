@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Apexnity · COROS style dashboard</title>
+  <title>Apexnity · COROS Training Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -76,8 +76,6 @@
     .nav-item.active { background-color: #1e3349; color: white; }
     .nav-item.active i { color: white; }
     .nav-item:hover { background-color: #1a2a40; color: #ecf3ff; }
-    
-    /* TOMBOL SYNC */
     .btn-sync {
       display: flex;
       align-items: center;
@@ -92,10 +90,7 @@
       justify-content: center;
       transition: background 0.2s;
     }
-    .btn-sync:hover {
-      background: #e04300;
-    }
-
+    .btn-sync:hover { background: #e04300; }
     .user-chip {
       margin-top: auto;
       display: flex;
@@ -152,6 +147,7 @@
       border: 1px solid #deeaf5;
       color: #1e3e64;
     }
+    /* GRID KARTU */
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -190,6 +186,7 @@
       font-weight: 500;
     }
     .trend-down { background: #ffe2e2; color: #b14343; }
+    /* GRAFIK */
     .chart-container {
       background: white;
       border-radius: 32px;
@@ -205,6 +202,7 @@
       align-items: center;
     }
     .chart-header h3 { font-weight: 600; color: #1a3149; }
+    /* TABEL */
     .recent-card {
       background: white;
       border-radius: 32px;
@@ -250,9 +248,50 @@
       font-size: 0.85rem;
       font-weight: 600;
     }
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.8rem;
+      margin-bottom: 2rem;
+    }
     .page { display: none; }
     .page.active { display: block; }
-    #raceSummary { margin-top: 2rem; }
+    /* widget tambahan */
+    .widget-small {
+      background: white;
+      border-radius: 24px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 25px -12px rgba(0,0,0,0.05);
+      border: 1px solid #eaf0f8;
+    }
+    .widget-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #6989b5;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .progress-bar {
+      height: 6px;
+      background: #e2ecfb;
+      border-radius: 10px;
+      margin: 0.5rem 0;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #fc4c02;
+      border-radius: 10px;
+      width: 0%;
+    }
+    .zone-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      padding: 0.2rem 0;
+    }
   </style>
 </head>
 <body>
@@ -263,18 +302,15 @@
         <div class="logo-icon">AX</div>
         <div class="logo-text">APEX<span>nity</span></div>
       </div>
-      
       <nav class="nav">
         <div class="nav-item active" onclick="switchPage('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</div>
         <div class="nav-item" onclick="switchPage('race')"><i class="fas fa-calendar-alt"></i> Race Target</div>
         <div class="nav-item" onclick="switchPage('strategy')"><i class="fas fa-map"></i> Strategy</div>
       </nav>
-
-      <!-- TOMBOL SYNC STRAVA (sesuaikan redirect_uri dengan domain Vercel-mu) -->
-      <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://[domain-mu]/api/metrics&scope=activity:read_all" class="btn-sync">
+      <!-- TOMBOL SYNC STRAVA (ganti YOUR_VERCEL_DOMAIN) -->
+      <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://YOUR_VERCEL_DOMAIN/api/metrics&scope=activity:read_all" class="btn-sync">
         <i class="fas fa-sync-alt"></i> <span>SYNC STRAVA</span>
       </a>
-
       <div class="user-chip">
         <div class="avatar" id="userInitial">A</div>
         <div class="user-info">
@@ -298,7 +334,7 @@
           </div>
         </div>
 
-        <!-- 4 KARTU METRIK UTAMA -->
+        <!-- 4 KARTU UTAMA (Fitness, Fatigue, Form, Total TSS) -->
         <div class="cards-grid">
           <div class="metric-card">
             <div class="metric-title"><i class="fas fa-heartbeat"></i> Fitness (CTL)</div>
@@ -322,17 +358,17 @@
           </div>
         </div>
 
-        <!-- GRAFIK PMC (CTL/ATL) -->
+        <!-- GRAFIK PMC (besar) -->
         <div class="chart-container">
           <div class="chart-header">
             <h3>Performance Management Chart</h3>
             <span class="badge-run">CTL · ATL</span>
           </div>
-          <canvas id="pmcChart" height="180"></canvas>
+          <canvas id="pmcChart" height="200"></canvas>
         </div>
 
-        <!-- GRAFIK VOLUME MINGGUAN + TABEL AKTIVITAS -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.8rem; margin-bottom: 2rem;">
+        <!-- DUA KOLOM: GRAFIK MINGGUAN + TABEL AKTIVITAS -->
+        <div class="two-column">
           <div class="chart-container" style="margin-bottom:0;">
             <h3 style="margin-bottom:1rem;">Weekly Volume</h3>
             <canvas id="weeklyChart" height="150"></canvas>
@@ -343,16 +379,66 @@
               <a href="#" id="viewAllLink">View all →</a>
             </div>
             <table id="activityTable">
-              <thead>
-                <tr><th>Type</th><th>Distance</th><th>TSS</th><th>Date</th></tr>
-              </thead>
+              <thead><tr><th>Type</th><th>Distance</th><th>TSS</th><th>Date</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
         </div>
 
-        <!-- RINGKASAN TARGET RACE -->
-        <div class="recent-card" id="raceSummary" style="display: none;">
+        <!-- BARIS KARTU TAMBAHAN (Training Status, Recovery, Threshold, PR, Race Predictor) -->
+        <div class="cards-grid" style="margin-top: 2rem;">
+          <!-- Training Status -->
+          <div class="widget-small">
+            <div class="widget-title"><i class="fas fa-activity"></i> Training Status</div>
+            <div style="font-size: 1.5rem; font-weight: 700;" id="trainingStatus">Analyzing</div>
+            <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+              <span>Load impact</span> <span id="loadImpact">0</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" id="loadBar" style="width:0%"></div></div>
+          </div>
+          <!-- Recovery -->
+          <div class="widget-small">
+            <div class="widget-title"><i class="fas fa-bed"></i> Recovery</div>
+            <div style="font-size: 1.5rem; font-weight: 700;" id="recoveryPct">0%</div>
+            <div class="progress-bar"><div class="progress-fill" id="recoveryBar" style="width:0%"></div></div>
+            <div class="muted" style="margin-top: 0.3rem;" id="recoveryHours">— hr till full</div>
+          </div>
+          <!-- Threshold Pace -->
+          <div class="widget-small">
+            <div class="widget-title"><i class="fas fa-gauge-high"></i> Threshold Pace</div>
+            <div style="font-size: 1.5rem; font-weight: 700;" id="thresholdPace">--'--"</div>
+            <div class="zone-row"><span>Z1 Easy</span> <span id="z1">—</span></div>
+            <div class="zone-row"><span>Z2 Endurance</span> <span id="z2">—</span></div>
+            <div class="zone-row"><span>Z3 Tempo</span> <span id="z3">—</span></div>
+            <div class="zone-row"><span>Z4 Threshold</span> <span id="z4">—</span></div>
+            <div class="zone-row"><span>Z5 VO2</span> <span id="z5">—</span></div>
+          </div>
+          <!-- Personal Records -->
+          <div class="widget-small">
+            <div class="widget-title"><i class="fas fa-trophy"></i> Personal Records</div>
+            <div class="zone-row"><span>Longest run</span> <span id="prDist">0 km</span></div>
+            <div class="zone-row"><span>Max elevation</span> <span id="prElev">0 m</span></div>
+            <div class="zone-row"><span>Best 5k</span> <span id="pr5k">—</span></div>
+            <div class="zone-row"><span>Best 10k</span> <span id="pr10k">—</span></div>
+          </div>
+        </div>
+
+        <!-- RACE PREDICTOR (baris terpisah) -->
+        <div class="recent-card" style="margin-top: 2rem;">
+          <div class="recent-header">
+            <h3>Race Predictor</h3>
+            <span class="badge-run">based on CTL</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+            <div><strong>5K</strong><br><span id="predict5k">--:--</span></div>
+            <div><strong>10K</strong><br><span id="predict10k">--:--</span></div>
+            <div><strong>HM</strong><br><span id="predictHm">--:--</span></div>
+            <div><strong>Marathon</strong><br><span id="predictMarathon">--:--</span></div>
+          </div>
+        </div>
+
+        <!-- RINGKASAN RACE TARGET (jika ada) -->
+        <div class="recent-card" id="raceSummary" style="margin-top: 2rem; display: none;">
           <div class="recent-header">
             <h3>Next Race</h3>
             <span class="badge-run" id="raceName"></span>
@@ -383,7 +469,6 @@
   </div>
 
   <script>
-    let uId = null;
     let pmcChart, weeklyChart;
 
     function switchPage(page) {
@@ -392,6 +477,22 @@
       document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
       const navMap = { 'dashboard': 0, 'race': 1, 'strategy': 2 };
       document.querySelectorAll('.nav-item')[navMap[page]].classList.add('active');
+    }
+
+    function formatPace(secPerKm) {
+      if (!secPerKm || secPerKm <= 0) return '--\'--"';
+      const m = Math.floor(secPerKm / 60);
+      const s = Math.round(secPerKm % 60);
+      return `${m}'${s.toString().padStart(2,'0')}"`;
+    }
+
+    function formatTime(seconds) {
+      if (!seconds || seconds <= 0) return '--:--';
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = Math.floor(seconds % 60);
+      if (h > 0) return `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+      return `${m}:${s.toString().padStart(2,'0')}`;
     }
 
     function formatDate(iso) {
@@ -404,27 +505,75 @@
       try {
         const res = await fetch('/api/metrics');
         const data = await res.json();
-        console.log('Data from API:', data);
+        console.log('Data:', data);
 
-        // Profile
         const prof = data.profile || {};
         document.getElementById('userName').innerText = prof.display_name || 'Athlete';
         document.getElementById('userInitial').innerText = (prof.display_name || 'A').charAt(0).toUpperCase();
 
-        // Today metrics
         const t = data.today || {};
         document.getElementById('metricCtl').innerText = Math.round(t.ctl);
         document.getElementById('metricAtl').innerText = Math.round(t.atl);
         document.getElementById('metricTsb').innerText = Math.round(t.tsb);
         document.getElementById('metricTss').innerText = Math.round(data.totals?.tss || 0);
 
-        // Trend sederhana (contoh)
+        // Trend sederhana
         document.getElementById('trendCtl').innerText = t.ctl > 50 ? 'Good' : 'Building';
         document.getElementById('trendAtl').innerText = t.atl > 80 ? 'High' : 'Moderate';
         document.getElementById('trendTsb').innerText = t.tsb > 0 ? 'Fresh' : 'Tired';
         document.getElementById('trendTss').innerText = (data.totals?.tss > 500) ? 'High load' : 'Normal';
 
-        // Sync info (ambil dari aktivitas terbaru)
+        // Training Status
+        let status = 'Optimized';
+        let loadImpact = 0;
+        if (t.atl > t.ctl * 1.25) status = 'Overreaching';
+        else if (t.tsb < -20) status = 'High Load';
+        else if (t.tsb > 10) status = 'Fresh';
+        document.getElementById('trainingStatus').innerText = status;
+        loadImpact = Math.round((t.atl / (t.ctl || 1)) * 100);
+        document.getElementById('loadImpact').innerText = loadImpact + '%';
+        document.getElementById('loadBar').style.width = Math.min(loadImpact, 100) + '%';
+
+        // Recovery
+        const rec = data.recovery || { pct: 0, hours: 0 };
+        document.getElementById('recoveryPct').innerText = rec.pct + '%';
+        document.getElementById('recoveryBar').style.width = rec.pct + '%';
+        document.getElementById('recoveryHours').innerText = rec.hours + ' hr till full';
+
+        // Threshold Pace & Zones
+        const thres = data.threshold_pace || 300;
+        document.getElementById('thresholdPace').innerText = formatPace(thres);
+        const z1 = thres * 1.25;
+        const z2 = thres * 1.12;
+        const z3 = thres * 1.00;
+        const z4 = thres * 0.92;
+        const z5 = thres * 0.85;
+        document.getElementById('z1').innerText = '≥ ' + formatPace(z1);
+        document.getElementById('z2').innerText = formatPace(z2) + ' - ' + formatPace(z1);
+        document.getElementById('z3').innerText = formatPace(z3) + ' - ' + formatPace(z2);
+        document.getElementById('z4').innerText = formatPace(z4) + ' - ' + formatPace(z3);
+        document.getElementById('z5').innerText = '≤ ' + formatPace(z5);
+
+        // Personal Records
+        const prs = data.prs || {};
+        document.getElementById('prDist').innerText = (prs.max_dist_km || 0).toFixed(1) + ' km';
+        document.getElementById('prElev').innerText = Math.round(prs.max_elev_m || 0) + ' m';
+        // PR 5k/10k belum dihitung, placeholder
+        document.getElementById('pr5k').innerText = '—';
+        document.getElementById('pr10k').innerText = '—';
+
+        // Race Predictor
+        const pred = data.race_predictions || [];
+        const getPred = (dist) => {
+          const p = pred.find(d => d.dist === dist);
+          return p ? formatTime(p.time) : '--:--';
+        };
+        document.getElementById('predict5k').innerText = getPred(5);
+        document.getElementById('predict10k').innerText = getPred(10);
+        document.getElementById('predictHm').innerText = getPred(21.1);
+        document.getElementById('predictMarathon').innerText = getPred(42.2);
+
+        // Sync info
         if (data.activities && data.activities.length > 0) {
           const last = new Date(data.activities[0].start_date);
           document.getElementById('syncInfo').innerHTML = `<i class="far fa-clock"></i> last activity: ${last.toLocaleDateString()}`;
@@ -447,34 +596,28 @@
         if (prof.target_km) document.getElementById('raceDistInput').value = prof.target_km;
         if (prof.race_date) document.getElementById('raceDateInput').value = prof.race_date;
 
-        // Timeseries untuk grafik PMC
+        // Grafik PMC
         const ts = data.timeseries || [];
-        const labels = ts.map(d => d.date.slice(5)); // MM-DD
+        const labels = ts.map(d => d.date.slice(5));
         const ctlData = ts.map(d => d.ctl);
         const atlData = ts.map(d => d.atl);
-
         if (pmcChart) pmcChart.destroy();
         pmcChart = new Chart(document.getElementById('pmcChart'), {
           type: 'line',
           data: {
-            labels: labels,
+            labels,
             datasets: [
               { label: 'CTL', data: ctlData, borderColor: '#2b6de5', backgroundColor: 'transparent', tension: 0.2 },
               { label: 'ATL', data: atlData, borderColor: '#fc4c02', backgroundColor: 'transparent', tension: 0.2 }
             ]
           },
-          options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-          }
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
         });
 
         // Grafik mingguan
         const weekly = data.weekly || [];
         const weekLabels = weekly.map(w => w.day);
         const weekData = weekly.map(w => parseFloat(w.km));
-
         if (weeklyChart) weeklyChart.destroy();
         weeklyChart = new Chart(document.getElementById('weeklyChart'), {
           type: 'bar',
@@ -482,11 +625,7 @@
             labels: weekLabels,
             datasets: [{ data: weekData, backgroundColor: '#2b6de5', borderRadius: 4 }]
           },
-          options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-          }
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
         });
 
         // Tabel aktivitas
@@ -500,16 +639,12 @@
           row.insertCell().innerText = formatDate(act.start_date);
         });
 
-        // Simpan userId untuk keperluan save race (diambil dari mana? Mungkin dari localStorage nanti)
-        // Sementara kita tidak pakai uId di saveRace, tapi bisa pakai fetch tanpa user_id karena backend akan resolve default.
       } catch (err) {
         console.error('Gagal load dashboard:', err);
       }
     }
 
     async function saveRace() {
-      // Karena kita belum punya user_id, kita kirim tanpa user_id; backend akan pakai default.
-      // Tapi sebaiknya kita simpan user_id setelah login. Sementara kita asumsikan hanya satu user.
       const payload = {
         race_name: document.getElementById('raceNameInput').value,
         target_km: document.getElementById('raceDistInput').value,
@@ -524,7 +659,7 @@
         const result = await res.json();
         if (result.status === 'success') {
           alert('Target race disimpan!');
-          loadDashboard(); // refresh
+          loadDashboard();
           switchPage('dashboard');
         } else {
           alert('Gagal menyimpan');
@@ -534,7 +669,6 @@
       }
     }
 
-    // Load data saat halaman dimuat
     window.addEventListener('load', loadDashboard);
   </script>
 </body>
