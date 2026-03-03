@@ -1,5 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/api/metrics", "destination": "/api/metrics.js" }
-  ]
-}
