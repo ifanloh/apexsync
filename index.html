@@ -1,538 +1,515 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Apexnity | Athlete Command Center</title>
-
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  <link rel="icon" href="https://static.coros.com/coros-traininghub-v2/favicon.ico" />
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apexnity · COROS style dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    :root {
-      --bg: #0b0e14; --card: #161b22; --border: #30363d; --text: #c9d1d9;
-      --cyan: #00f2ff; --orange: #fc4c02; --red: #ff4d4d; --green: #2ecc71;
-      --sidebar-w: 260px; --sidebar-c: 75px;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Inter', -apple-system, sans-serif; background-color: var(--bg); color: var(--text);
-      margin: 0; display: flex; height: 100vh; overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      background-color: #f4f7fc;
+      color: #1e293b;
+      line-height: 1.5;
     }
-
-    /* --- SIDEBAR --- */
-    #sidebar {
-      width: var(--sidebar-w); height: 100vh; background: var(--card);
-      border-right: 1px solid var(--border); position: fixed; left: 0; top: 0;
-      display: flex; flex-direction: column; transition: width 0.3s ease; z-index: 2000;
+    .dashboard {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
     }
-    #sidebar.collapsed { width: var(--sidebar-c); }
-
-    .sidebar-header { padding: 20px; display: flex; align-items: center; justify-content: space-between; min-height: 60px; }
-    .logo-text { font-weight: 800; color: white; letter-spacing: 1px; }
-    .collapsed .logo-text { display: none; }
-
-    .profile-box { padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; white-space: nowrap; overflow: hidden; }
-    .profile-img { width: 35px; height: 35px; border-radius: 50%; background: var(--cyan); display: flex; align-items: center; justify-content: center; color: black; font-weight: bold; flex-shrink: 0; }
-    .collapsed .profile-info { opacity: 0; pointer-events: none; }
-
-    .nav-links { padding: 10px; flex-grow: 1; overflow-y: auto; }
-    .nav-item { display: flex; align-items: center; gap: 15px; padding: 12px 15px; color: var(--text); text-decoration: none; border-radius: 6px; transition: 0.2s; margin-bottom: 5px; cursor: pointer; }
-    .nav-item:hover, .nav-item.active { background: #21262d; color: var(--cyan); }
-    .collapsed .nav-item span { display: none; }
-
-    .btn-sync { background: var(--orange); color: white; margin: 10px; padding: 12px; border-radius: 6px; text-decoration: none; display: flex; align-items: center; gap: 12px; font-weight: bold; justify-content: center; }
-    .collapsed .btn-sync span { display: none; }
-
-    /* --- MAIN --- */
-    #main-content {
-      margin-left: var(--sidebar-w); padding: 25px;
-      width: calc(100% - var(--sidebar-w)); height: 100vh;
-      overflow-y: auto; transition: all 0.3s ease; box-sizing: border-box;
+    /* SIDEBAR */
+    .sidebar {
+      background-color: #0b182c;
+      color: #e2e8f0;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
     }
-    body.collapsed-mode #main-content {
-      margin-left: var(--sidebar-c); width: calc(100% - var(--sidebar-c));
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding-left: 0.5rem;
     }
-
+    .logo-icon {
+      background: #2d4b9e;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: white;
+    }
+    .logo-text {
+      font-weight: 700;
+      font-size: 1.35rem;
+      letter-spacing: -0.5px;
+      color: white;
+    }
+    .logo-text span { color: #6c8cff; }
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      font-weight: 500;
+      color: #a9c1e0;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .nav-item i { width: 24px; font-size: 1.25rem; color: #6080c0; }
+    .nav-item.active { background-color: #1e3349; color: white; }
+    .nav-item.active i { color: white; }
+    .nav-item:hover { background-color: #1a2a40; color: #ecf3ff; }
+    .user-chip {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 0.5rem;
+      border-top: 1px solid #253b55;
+    }
+    .avatar {
+      width: 44px; height: 44px;
+      background: linear-gradient(145deg, #3f5e9c, #1f3a66);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: white;
+    }
+    .user-info small { display: block; font-size: 0.75rem; color: #7f9bc0; }
+    /* MAIN */
+    .main {
+      background-color: #f8fafd;
+      padding: 2rem 2.5rem;
+      overflow-y: auto;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .page-title h1 {
+      font-weight: 700;
+      font-size: 2rem;
+      color: #0f263b;
+    }
+    .page-title p {
+      color: #5f7d9c;
+      font-size: 0.95rem;
+      margin-top: 4px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .date-badge {
+      background: white;
+      border-radius: 30px;
+      padding: 0.5rem 1.5rem;
+      font-weight: 500;
+      font-size: 0.9rem;
+      border: 1px solid #deeaf5;
+      color: #1e3e64;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.8rem;
+      margin: 2.5rem 0 2.2rem;
+    }
+    .metric-card {
+      background: white;
+      border-radius: 28px;
+      padding: 1.8rem 1.5rem;
+      box-shadow: 0 10px 25px -8px rgba(0,20,50,0.1);
+      border: 1px solid #ffffff50;
+    }
+    .metric-title {
+      color: #6989b5;
+      font-weight: 500;
+      font-size: 1rem;
+      margin-bottom: 0.7rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .metric-value {
+      font-weight: 700;
+      font-size: 2.5rem;
+      color: #0f283f;
+      margin-bottom: 0.2rem;
+    }
+    .metric-trend {
+      font-size: 0.9rem;
+      color: #3b7a5e;
+      background: #e2f3e9;
+      display: inline-block;
+      padding: 0.2rem 0.8rem;
+      border-radius: 40px;
+      font-weight: 500;
+    }
+    .trend-down { background: #ffe2e2; color: #b14343; }
+    .chart-container {
+      background: white;
+      border-radius: 32px;
+      padding: 1.8rem;
+      margin-bottom: 2.2rem;
+      box-shadow: 0 10px 25px -12px rgba(0,0,0,0.08);
+      border: 1px solid #eaf0f8;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+    .chart-header h3 { font-weight: 600; color: #1a3149; }
+    .recent-card {
+      background: white;
+      border-radius: 32px;
+      padding: 1.8rem;
+      box-shadow: 0 10px 25px -12px rgba(0,0,0,0.05);
+      border: 1px solid #eaf0f8;
+    }
+    .recent-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .recent-header h3 { font-weight: 600; color: #1a3149; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left;
+      padding: 0.9rem 0.2rem 0.9rem 0;
+      font-weight: 600;
+      color: #53779e;
+      font-size: 0.85rem;
+      border-bottom: 2px solid #e2ecfb;
+    }
+    td {
+      padding: 1rem 0.2rem 1rem 0;
+      border-bottom: 1px solid #edf3fa;
+      font-weight: 500;
+      color: #253e5a;
+    }
+    .badge-run {
+      background: #e6f0ff;
+      color: #2266cc;
+      padding: 0.3rem 1rem;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .badge-ride {
+      background: #e2f2e9;
+      color: #1f7840;
+      padding: 0.3rem 1rem;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
     .page { display: none; }
     .page.active { display: block; }
-
-    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 1400px; margin: 0 auto; }
-    .card { background: var(--card); border: 1px solid var(--border); padding: 12px; border-radius: 4px; }
-    .card-h { font-size: 11px; font-weight: 600; color: #8b949e; margin-bottom: 10px; display: flex; justify-content: space-between; text-transform: uppercase; }
-    .big-val { font-size: 32px; font-weight: 800; color: white; text-align: center; margin: 5px 0; }
-    .span-2 { grid-column: span 2; }
-
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    td { padding: 6px 0; border-bottom: 1px solid #21262d; vertical-align: top; }
-    .bar-bg { height: 4px; background: #21262d; border-radius: 2px; margin: 6px 0; }
-    .bar-fill { height: 100%; background: var(--orange); transition: width 0.5s; }
-
-    .muted { color:#8b949e; font-size: 10px; }
-    .pill { font-size: 10px; padding: 2px 8px; border: 1px solid #21262d; border-radius: 99px; color:#c9d1d9; }
-    .warn { color: var(--orange); }
-    .ok { color: var(--green); }
-    .bad { color: var(--red); }
+    #raceSummary { margin-top: 2rem; }
   </style>
 </head>
-
-<body class="collapsed-mode">
-  <nav id="sidebar" class="collapsed">
-    <div class="sidebar-header">
-      <span class="logo-text">APEXNITY</span>
-      <button onclick="toggleSide()" style="background:none; border:none; color:white; cursor:pointer;">
-        <i data-lucide="menu"></i>
-      </button>
-    </div>
-
-    <div class="profile-box">
-      <div class="profile-img" id="user-initial">A</div>
-      <div class="profile-info">
-        <div id="user-name" style="font-weight: bold; color: white;">Athlete</div>
-        <small id="user-role" style="color: #8b949e;">Training Dashboard</small>
+<body>
+  <div class="dashboard">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="logo-area">
+        <div class="logo-icon">AX</div>
+        <div class="logo-text">APEX<span>nity</span></div>
       </div>
-    </div>
-
-    <div class="nav-links">
-      <div class="nav-item active" onclick="switchPage('dashboard', this)"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></div>
-      <div class="nav-item" onclick="switchPage('race', this)"><i data-lucide="target"></i> <span>Race Target</span></div>
-      <div class="nav-item" onclick="switchPage('strategy', this)"><i data-lucide="map"></i> <span>Strategy</span></div>
-    </div>
-
-    <!-- NOTE: redirect_uri harus sesuai deployment kamu -->
-    <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://apexsync.vercel.app/api/metrics&scope=activity:read_all" class="btn-sync">
-      <i data-lucide="refresh-cw"></i> <span>SYNC STRAVA</span>
-    </a>
-  </nav>
-
-  <main id="main-content">
-    <section id="page-dashboard" class="page active">
-      <div class="grid">
-        <div class="card">
-          <div class="card-h">Running Fitness <span class="pill" id="range-pill">90D</span></div>
-          <div class="big-val" id="v-ctl">0</div>
-          <div style="font-size:9px; display:flex; justify-content:space-between;"><span>Endurance</span><span id="end-pct">0%</span></div>
-          <div class="bar-bg"><div class="bar-fill" id="end-fill" style="width: 0%"></div></div>
-          <div class="muted" style="margin-top:8px; display:flex; justify-content:space-between;">
-            <span>Form (TSB)</span><span id="v-tsb">0</span>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-h">Training Status</div>
-          <div style="color:var(--orange); font-size:18px; font-weight:bold; margin-bottom:5px;" id="v-status">Analyzing...</div>
-          <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:10px;">
-            <div>Impact<br><b id="v-atl" style="color:white;">0</b></div>
-            <div>Trend<br><b id="v-trend" style="color:var(--green);">0%</b></div>
-          </div>
-          <div class="muted" style="margin-top:10px;">
-            <span id="sum-7d"></span>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-h">Recovery Status</div>
-          <div style="text-align:center; padding:10px 0;">
-            <div style="font-size:28px; font-weight:bold;" id="rec-val">0%</div>
-            <small id="rec-hours" style="font-size:9px; color:#8b949e;">-- hr till full</small>
-          </div>
-          <div class="muted" style="text-align:center;">
-            based on ATL
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-h">Recent Activities</div>
-          <table id="act-table"></table>
-          <div class="muted" id="act-empty" style="display:none; padding-top:6px;">No activities found.</div>
-        </div>
-
-        <div class="card span-2">
-          <div class="card-h">Performance Management Chart</div>
-          <canvas id="pmcChart" height="120"></canvas>
-        </div>
-
-        <div class="card">
-          <div class="card-h">Threshold Pace</div>
-          <div style="font-size:14px; margin-bottom:8px; text-align:center;">Base: <b id="v-base-pace">--'--"</b></div>
-          <table id="zone-table"></table>
-          <div class="muted" style="padding-top:6px;">
-            (estimated from Fitness)
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-h">Weekly Volume</div>
-          <canvas id="weeklyChart" height="150"></canvas>
-        </div>
-
-        <div class="card">
-          <div class="card-h">Personal Records</div>
-          <table id="pr-table"></table>
-          <div class="muted" style="padding-top:6px;">(from recent feed)</div>
-        </div>
-
-        <div class="card">
-          <div class="card-h">Race Predictor</div>
-          <table id="race-table"></table>
-          <div class="muted" style="padding-top:6px;">(simple model)</div>
-        </div>
-
-        <div class="card">
-          <div class="card-h" id="dash-race-name">CURRENT GOAL</div>
-          <div id="dash-timer" style="font-size:14px; font-weight:800; color:var(--cyan); text-align:center;">NO RACE SET</div>
-          <div style="text-align:center; border-top:1px solid #21262d; padding-top:10px; margin-top:10px;">
-            <small style="font-size:9px;">EST. FINISH</small><br><b id="dash-est" style="color:white; font-size:13px;">--:--:--</b>
-          </div>
+      <nav class="nav">
+        <div class="nav-item active" onclick="switchPage('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</div>
+        <div class="nav-item" onclick="switchPage('race')"><i class="fas fa-calendar-alt"></i> Race Target</div>
+        <div class="nav-item" onclick="switchPage('strategy')"><i class="fas fa-map"></i> Strategy</div>
+      </nav>
+      <div class="user-chip">
+        <div class="avatar" id="userInitial">A</div>
+        <div class="user-info">
+          <strong id="userName">Athlete</strong>
+          <small id="userLevel">Training Dashboard</small>
         </div>
       </div>
-    </section>
+    </aside>
 
-    <section id="page-race" class="page">
-      <div class="card" style="max-width:500px;">
-        <div class="card-h">Set Your Target</div>
-        <input type="text" id="in-race-name" placeholder="Nama Race" style="width:100%; padding:10px; margin-bottom:10px; background:#0d1117; border:1px solid var(--border); color:white;">
-        <input type="number" id="in-race-km" placeholder="Jarak (KM)" style="width:100%; padding:10px; margin-bottom:10px; background:#0d1117; border:1px solid var(--border); color:white;">
-        <input type="date" id="in-race-date" style="width:100%; padding:10px; margin-bottom:20px; background:#0d1117; border:1px solid var(--border); color:white;">
-        <button onclick="saveRace()" style="width:100%; padding:12px; background:var(--cyan); color:black; border:none; font-weight:bold; cursor:pointer;">LOCK TARGET</button>
-        <div class="muted" style="margin-top:10px;">
-          Pastikan sudah sync Strava dulu agar user_id terdeteksi.
+    <!-- MAIN CONTENT -->
+    <main class="main">
+      <!-- HALAMAN DASHBOARD -->
+      <section id="page-dashboard" class="page active">
+        <div class="header-bar">
+          <div class="page-title">
+            <h1>Training overview</h1>
+            <p id="syncInfo"><i class="far fa-clock"></i> last sync: --</p>
+          </div>
+          <div class="header-actions">
+            <div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="dateRange">90D</span></div>
+          </div>
         </div>
-      </div>
-    </section>
 
-    <section id="page-strategy" class="page">
-      <div class="card" style="max-width:900px;">
-        <div class="card-h">Strategy</div>
-        <div class="muted">
-          Placeholder. Nanti bisa diisi: split plan, fueling plan, HR/power targets, dll.
+        <!-- 4 KARTU METRIK UTAMA -->
+        <div class="cards-grid">
+          <div class="metric-card">
+            <div class="metric-title"><i class="fas fa-heartbeat"></i> Fitness (CTL)</div>
+            <div class="metric-value" id="metricCtl">0</div>
+            <span class="metric-trend" id="trendCtl">—</span>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title"><i class="fas fa-bolt"></i> Fatigue (ATL)</div>
+            <div class="metric-value" id="metricAtl">0</div>
+            <span class="metric-trend trend-down" id="trendAtl">—</span>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title"><i class="fas fa-chart-line"></i> Form (TSB)</div>
+            <div class="metric-value" id="metricTsb">0</div>
+            <span class="metric-trend" id="trendTsb">—</span>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title"><i class="fas fa-fire"></i> Total TSS</div>
+            <div class="metric-value" id="metricTss">0</div>
+            <span class="metric-trend" id="trendTss">—</span>
+          </div>
         </div>
-      </div>
-    </section>
-  </main>
+
+        <!-- GRAFIK PMC (CTL/ATL) -->
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Performance Management Chart</h3>
+            <span class="badge-run">CTL · ATL</span>
+          </div>
+          <canvas id="pmcChart" height="180"></canvas>
+        </div>
+
+        <!-- GRAFIK VOLUME MINGGUAN + TABEL AKTIVITAS -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.8rem; margin-bottom: 2rem;">
+          <div class="chart-container" style="margin-bottom:0;">
+            <h3 style="margin-bottom:1rem;">Weekly Volume</h3>
+            <canvas id="weeklyChart" height="150"></canvas>
+          </div>
+          <div class="recent-card" style="margin-bottom:0;">
+            <div class="recent-header">
+              <h3>Recent Activities</h3>
+              <a href="#" id="viewAllLink">View all →</a>
+            </div>
+            <table id="activityTable">
+              <thead>
+                <tr><th>Type</th><th>Distance</th><th>TSS</th><th>Date</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- RINGKASAN TARGET RACE -->
+        <div class="recent-card" id="raceSummary" style="display: none;">
+          <div class="recent-header">
+            <h3>Next Race</h3>
+            <span class="badge-run" id="raceName"></span>
+          </div>
+          <p id="raceCountdown"></p>
+        </div>
+      </section>
+
+      <!-- HALAMAN RACE TARGET -->
+      <section id="page-race" class="page">
+        <div style="max-width:500px; background: white; border-radius: 32px; padding: 2rem;">
+          <h2>Set Target Race</h2>
+          <input type="text" id="raceNameInput" placeholder="Nama Race" style="width:100%; padding:10px; margin:10px 0; background:#f0f4fa; border:1px solid #ccc;">
+          <input type="number" id="raceDistInput" placeholder="Jarak (km)" style="width:100%; padding:10px; margin:10px 0; background:#f0f4fa; border:1px solid #ccc;">
+          <input type="date" id="raceDateInput" style="width:100%; padding:10px; margin:10px 0; background:#f0f4fa; border:1px solid #ccc;">
+          <button onclick="saveRace()" style="background:#2d4b9e; color:white; padding:12px; border:none; border-radius:12px; width:100%; font-weight:bold;">Simpan</button>
+        </div>
+      </section>
+
+      <!-- HALAMAN STRATEGY -->
+      <section id="page-strategy" class="page">
+        <div style="background: white; border-radius: 32px; padding: 2rem;">
+          <h2>Strategy & Notes</h2>
+          <p class="muted">Fitur akan segera hadir.</p>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script>
     let uId = null;
-    let currentPace = null;
-    let pmcChartRef = null;
-    let weeklyChartRef = null;
+    let pmcChart, weeklyChart;
 
-    function toggleSide() {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-      document.body.classList.toggle('collapsed-mode');
-      localStorage.setItem('sidebar-collapsed', document.getElementById('sidebar').classList.contains('collapsed'));
-    }
-
-    function switchPage(p, el) {
-      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+    function switchPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(`page-${page}`).classList.add('active');
       document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-      const target = document.getElementById('page-' + p);
-      if (target) target.classList.add('active');
-      if (el) el.classList.add('active');
+      const navMap = { 'dashboard': 0, 'race': 1, 'strategy': 2 };
+      document.querySelectorAll('.nav-item')[navMap[page]].classList.add('active');
     }
 
-    function safeNum(x, fallback = 0) {
-      const n = Number(x);
-      return Number.isFinite(n) ? n : fallback;
+    function formatDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 
-    function formatPace(secPerKm) {
-      if (!Number.isFinite(secPerKm) || secPerKm <= 0) return `--'--"`;
-      const m = Math.floor(secPerKm / 60);
-      const sec = Math.round(secPerKm % 60);
-      return `${m}'${sec.toString().padStart(2,'0')}"`;
-    }
-
-    function formatTime(s) {
-      const sec = Math.max(0, Math.round(Number(s) || 0));
-      const h = Math.floor(sec / 3600);
-      const m = Math.floor((sec % 3600) / 60);
-      const ss = sec % 60;
-      return h > 0 ? `${h}:${m.toString().padStart(2,'0')}:${ss.toString().padStart(2,'0')}` : `${m}:${ss.toString().padStart(2,'0')}`;
-    }
-
-    function startCountdown(dateStr) {
-      const update = () => {
-        const diff = new Date(dateStr) - new Date();
-        if (diff < 0) return;
-        const d = Math.floor(diff / 864e5);
-        const h = Math.floor((diff % 864e5) / 36e5);
-        document.getElementById('dash-timer').innerText = `${d}D ${h}H REMAINING`;
-      };
-      update();
-      setInterval(update, 60000);
-    }
-
-    function pickTrainingStatus(ctl, atl, tsb) {
-      // simple, readable logic
-      if (!Number.isFinite(ctl) || !Number.isFinite(atl)) return { text: "Analyzing...", cls: "warn" };
-      if (atl > ctl * 1.25) return { text: "Overreaching", cls: "bad" };
-      if (tsb != null && tsb < -20) return { text: "High Load", cls: "warn" };
-      if (tsb != null && tsb > 10) return { text: "Fresh", cls: "ok" };
-      return { text: "Optimized", cls: "ok" };
-    }
-
-    function computeRecoveryPct(atl) {
-      if (!Number.isFinite(atl)) return { pct: 0, hours: "--" };
-      const pct = Math.max(0, Math.min(100, 100 - Math.round(atl * 0.7)));
-      const hours = Math.round((100 - pct) * 0.6);
-      return { pct, hours };
-    }
-
-    function renderRecentActivities(activities) {
-      const actTable = document.getElementById('act-table');
-      const empty = document.getElementById('act-empty');
-      actTable.innerHTML = "";
-
-      if (!activities || activities.length === 0) {
-        empty.style.display = "block";
-        return;
-      }
-      empty.style.display = "none";
-
-      activities.slice(0, 5).forEach(a => {
-        const type = a.type || "Run";
-        const icon = type === 'Ride' ? 'bike' : (type === 'WeightTraining' ? 'dumbbell' : 'run');
-        const km = safeNum(a.distance_m, 0) / 1000;
-        const tss = safeNum(a.tss, 0);
-
-        actTable.innerHTML += `<tr>
-          <td style="width:18px;"><i data-lucide="${icon}" size="12" style="color:var(--orange)"></i></td>
-          <td>${km.toFixed(1)}k</td>
-          <td style="text-align:right;">${Math.round(tss)}TL</td>
-        </tr>`;
-      });
-    }
-
-    function renderPRsFromRecent(activities) {
-      // NOTE: this is a snapshot from last 30 activities (feed), not lifetime.
-      let maxDist = 0;
-      let maxElev = 0;
-
-      (activities || []).forEach(a => {
-        maxDist = Math.max(maxDist, safeNum(a.distance_m, 0));
-        maxElev = Math.max(maxElev, safeNum(a.elev_m, 0));
-      });
-
-      document.getElementById('pr-table').innerHTML = `
-        <tr><td>Longest (recent)</td><td style="text-align:right">${(maxDist/1000).toFixed(1)}k</td></tr>
-        <tr><td>Max Elev (recent)</td><td style="text-align:right">${Math.round(maxElev)}m</td></tr>
-      `;
-    }
-
-    function renderRacePredictor(ctl, targetKm) {
-      // Simple model: pace improves with ctl; purely heuristic
-      const base = 253 - (safeNum(ctl, 0) * 0.45); // sec/km
-      const est = (Number(targetKm) > 0) ? formatTime(Number(targetKm) * base) : "--:--:--";
-
-      document.getElementById('race-table').innerHTML = `
-        <tr><td>Est. pace</td><td style="text-align:right">${formatPace(base)}</td></tr>
-        <tr><td>Est. finish</td><td style="text-align:right">${est}</td></tr>
-      `;
-      return base;
-    }
-
-    function renderZoneTable(basePaceSec) {
-      // Simple 5 zones from base pace (heuristic)
-      // Faster pace => lower sec/km. Zones are ranges in sec/km.
-      if (!Number.isFinite(basePaceSec) || basePaceSec <= 0) {
-        document.getElementById('zone-table').innerHTML = `<tr><td class="muted">No data</td><td></td></tr>`;
-        return;
-      }
-      const z1 = basePaceSec * 1.25;
-      const z2 = basePaceSec * 1.12;
-      const z3 = basePaceSec * 1.00;
-      const z4 = basePaceSec * 0.92;
-      const z5 = basePaceSec * 0.85;
-
-      document.getElementById('zone-table').innerHTML = `
-        <tr><td>Z1 Easy</td><td style="text-align:right">${formatPace(z1)}+</td></tr>
-        <tr><td>Z2 Endurance</td><td style="text-align:right">${formatPace(z2)} - ${formatPace(z1)}</td></tr>
-        <tr><td>Z3 Tempo</td><td style="text-align:right">${formatPace(z3)} - ${formatPace(z2)}</td></tr>
-        <tr><td>Z4 Threshold</td><td style="text-align:right">${formatPace(z4)} - ${formatPace(z3)}</td></tr>
-        <tr><td>Z5 VO2</td><td style="text-align:right">≤ ${formatPace(z5)}</td></tr>
-      `;
-    }
-
-    function destroyIfExists(chartRef) {
-      try { if (chartRef) chartRef.destroy(); } catch(e) {}
-      return null;
-    }
-
-    function renderCharts(timeseries, weekly) {
-      const ts = timeseries || [];
-
-      // PMC (CTL/ATL) from timeseries
-      const labels = ts.map(x => x.date);
-      const ctl = ts.map(x => x.ctl ?? null);
-      const atl = ts.map(x => x.atl ?? null);
-
-      pmcChartRef = destroyIfExists(pmcChartRef);
-      pmcChartRef = new Chart(document.getElementById('pmcChart'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label: 'Fitness', data: ctl, borderColor: '#00f2ff', tension: 0.3, pointRadius: 0 },
-            { label: 'Fatigue', data: atl, borderColor: '#ff4d4d', tension: 0.3, pointRadius: 0 }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: { x: { display: false } }
-        }
-      });
-
-      // Weekly Volume (bar) from weekly[]
-      const w = weekly || [];
-      const wLabels = w.map(x => x.week_start);
-      const wKm = w.map(x => (safeNum(x.distance_m, 0) / 1000));
-
-      weeklyChartRef = destroyIfExists(weeklyChartRef);
-      weeklyChartRef = new Chart(document.getElementById('weeklyChart'), {
-        type: 'bar',
-        data: {
-          labels: wLabels,
-          datasets: [{ data: wKm, backgroundColor: '#00f2ff', borderRadius: 2 }]
-        },
-        options: { responsive: true, plugins: { legend: { display: false } } }
-      });
-    }
-
-    async function init() {
+    async function loadDashboard() {
       try {
-        const res = await fetch('/api/dashboard');
-        const root = await res.json();
-        console.log("Dashboard payload:", root);
-
-        const profile = root.profile || null;
-        const summary = root.summary || {};
-        const today = summary.today || {};
-        const totals = summary.totals || {};
-        const timeseries = root.timeseries || [];
-        const weekly = root.weekly || [];
-        const activities = root.activities || [];
-
-        // User id
-        uId = profile?.user_id || null;
+        const res = await fetch('/api/metrics');
+        const data = await res.json();
+        console.log('Data from API:', data);
 
         // Profile
-        const displayName = profile?.display_name || "Athlete";
-        document.getElementById('user-name').innerText = displayName;
-        document.getElementById('user-initial').innerText = (displayName || "A").charAt(0).toUpperCase();
+        const prof = data.profile || {};
+        document.getElementById('userName').innerText = prof.display_name || 'Athlete';
+        document.getElementById('userInitial').innerText = (prof.display_name || 'A').charAt(0).toUpperCase();
 
-        // Range pill
-        const from = summary?.range?.from;
-        const to = summary?.range?.to;
-        if (from && to) document.getElementById('range-pill').innerText = `${from} → ${to}`;
+        // Today metrics
+        const t = data.today || {};
+        document.getElementById('metricCtl').innerText = Math.round(t.ctl);
+        document.getElementById('metricAtl').innerText = Math.round(t.atl);
+        document.getElementById('metricTsb').innerText = Math.round(t.tsb);
+        document.getElementById('metricTss').innerText = Math.round(data.totals?.tss || 0);
 
-        // Today metrics (Fitness/Fatigue/Form)
-        const ctl = safeNum(today.ctl, 0);
-        const atl = safeNum(today.atl, 0);
-        const tsb = (today.tsb == null) ? null : safeNum(today.tsb, 0);
+        // Trend sederhana (contoh)
+        document.getElementById('trendCtl').innerText = t.ctl > 50 ? 'Good' : 'Building';
+        document.getElementById('trendAtl').innerText = t.atl > 80 ? 'High' : 'Moderate';
+        document.getElementById('trendTsb').innerText = t.tsb > 0 ? 'Fresh' : 'Tired';
+        document.getElementById('trendTss').innerText = (data.totals?.tss > 500) ? 'High load' : 'Normal';
 
-        document.getElementById('v-ctl').innerText = Math.round(ctl);
-        document.getElementById('v-atl').innerText = Math.round(atl);
-        document.getElementById('v-tsb').innerText = (tsb == null ? "—" : Math.round(tsb));
-
-        // Endurance %
-        const endPct = Math.min(100, Math.round(ctl / 1.2));
-        document.getElementById('end-pct').innerText = endPct + "%";
-        document.getElementById('end-fill').style.width = endPct + "%";
-
-        // Trend %
-        const trendPct = (ctl > 0) ? Math.round((atl / ctl) * 100) : 0;
-        document.getElementById('v-trend').innerText = trendPct + "%";
-
-        // Training status label
-        const st = pickTrainingStatus(ctl, atl, tsb);
-        const statusEl = document.getElementById('v-status');
-        statusEl.innerText = st.text;
-        statusEl.classList.remove("ok", "warn", "bad");
-        statusEl.classList.add(st.cls);
-
-        // Summary 7d (gunakan totals dari range yg difetch; default range 90d, jadi kita bikin hint general)
-        const tKm = (safeNum(totals.distance_m, 0) / 1000).toFixed(1);
-        const tHr = (safeNum(totals.moving_time_s, 0) / 3600).toFixed(1);
-        const tElev = Math.round(safeNum(totals.elev_m, 0));
-        const tTss = Math.round(safeNum(totals.tss, 0));
-        document.getElementById('sum-7d').innerText = `Range totals: ${tKm} km • ${tHr} hr • ${tElev} m • ${tTss} TL`;
-
-        // Recovery
-        const rec = computeRecoveryPct(atl);
-        document.getElementById('rec-val').innerText = rec.pct + "%";
-        document.getElementById('rec-hours').innerText = rec.hours + " hr till full";
-
-        // Recent Activities
-        renderRecentActivities(activities);
-
-        // Pace base + zones + race predictor
-        currentPace = renderRacePredictor(ctl, profile?.race?.target_km);
-        document.getElementById('v-base-pace').innerText = formatPace(currentPace);
-        renderZoneTable(currentPace);
-
-        // PRs
-        renderPRsFromRecent(activities);
-
-        // Race goal
-        const race = profile?.race || {};
-        const raceName = race?.name;
-        const raceDate = race?.date;
-        const targetKm = race?.target_km;
-
-        if (raceDate) {
-          startCountdown(raceDate);
-          document.getElementById('dash-race-name').innerText = raceName || "TARGET";
-          if (targetKm) document.getElementById('dash-est').innerText = formatTime(Number(targetKm) * currentPace);
-        } else {
-          document.getElementById('dash-race-name').innerText = "CURRENT GOAL";
-          document.getElementById('dash-timer').innerText = "NO RACE SET";
+        // Sync info (ambil dari aktivitas terbaru)
+        if (data.activities && data.activities.length > 0) {
+          const last = new Date(data.activities[0].start_date);
+          document.getElementById('syncInfo').innerHTML = `<i class="far fa-clock"></i> last activity: ${last.toLocaleDateString()}`;
         }
 
-        // Prefill race form
-        if (raceName) document.getElementById('in-race-name').value = raceName;
-        if (targetKm) document.getElementById('in-race-km').value = targetKm;
-        if (raceDate) document.getElementById('in-race-date').value = raceDate;
+        // Race summary
+        if (prof.race_name) {
+          document.getElementById('raceSummary').style.display = 'block';
+          document.getElementById('raceName').innerText = prof.race_name;
+          if (prof.race_date) {
+            const days = Math.ceil((new Date(prof.race_date) - new Date()) / (1000*60*60*24));
+            document.getElementById('raceCountdown').innerText = `${days} hari lagi (${prof.race_date})`;
+          }
+        } else {
+          document.getElementById('raceSummary').style.display = 'none';
+        }
 
-        // Charts
-        renderCharts(timeseries, weekly);
+        // Isi form race
+        if (prof.race_name) document.getElementById('raceNameInput').value = prof.race_name;
+        if (prof.target_km) document.getElementById('raceDistInput').value = prof.target_km;
+        if (prof.race_date) document.getElementById('raceDateInput').value = prof.race_date;
 
-      } catch (e) {
-        console.error("Error loading dashboard:", e);
+        // Timeseries untuk grafik PMC
+        const ts = data.timeseries || [];
+        const labels = ts.map(d => d.date.slice(5)); // MM-DD
+        const ctlData = ts.map(d => d.ctl);
+        const atlData = ts.map(d => d.atl);
+
+        if (pmcChart) pmcChart.destroy();
+        pmcChart = new Chart(document.getElementById('pmcChart'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              { label: 'CTL', data: ctlData, borderColor: '#2b6de5', backgroundColor: 'transparent', tension: 0.2 },
+              { label: 'ATL', data: atlData, borderColor: '#fc4c02', backgroundColor: 'transparent', tension: 0.2 }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+
+        // Grafik mingguan
+        const weekly = data.weekly || [];
+        const weekLabels = weekly.map(w => w.day);
+        const weekData = weekly.map(w => parseFloat(w.km));
+
+        if (weeklyChart) weeklyChart.destroy();
+        weeklyChart = new Chart(document.getElementById('weeklyChart'), {
+          type: 'bar',
+          data: {
+            labels: weekLabels,
+            datasets: [{ data: weekData, backgroundColor: '#2b6de5', borderRadius: 4 }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+
+        // Tabel aktivitas
+        const tbody = document.querySelector('#activityTable tbody');
+        tbody.innerHTML = '';
+        (data.activities || []).slice(0, 5).forEach(act => {
+          const row = tbody.insertRow();
+          row.insertCell().innerHTML = `<span class="badge-${act.type === 'Ride' ? 'ride' : 'run'}">${act.type || 'Run'}</span>`;
+          row.insertCell().innerText = act.distance_km + ' km';
+          row.insertCell().innerText = Math.round(act.tss);
+          row.insertCell().innerText = formatDate(act.start_date);
+        });
+
+        // Simpan userId untuk keperluan save race (diambil dari mana? Mungkin dari localStorage nanti)
+        // Sementara kita simpan dari response? Tidak ada di response. Kita pakai user_id dari cookie atau localStorage nanti.
+        // Untuk sementara, kita tidak pakai uId di saveRace, tapi bisa pakai fetch tanpa user_id karena backend akan resolve default.
+      } catch (err) {
+        console.error('Gagal load dashboard:', err);
       }
-
-      lucide.createIcons();
     }
 
     async function saveRace() {
-      if (!uId) {
-        alert("user_id belum terdeteksi. Sync Strava dulu.");
-        return;
-      }
-
+      // Karena kita belum punya user_id, kita kirim tanpa user_id; backend akan pakai default.
+      // Tapi sebaiknya kita simpan user_id setelah login. Sementara kita asumsikan hanya satu user.
       const payload = {
-        user_id: uId,
-        race_name: document.getElementById('in-race-name').value,
-        target_km: document.getElementById('in-race-km').value,
-        race_date: document.getElementById('in-race-date').value
+        race_name: document.getElementById('raceNameInput').value,
+        target_km: document.getElementById('raceDistInput').value,
+        race_date: document.getElementById('raceDateInput').value
       };
-
-      await fetch('/api/save-strategy', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-      });
-
-      location.reload();
+      try {
+        const res = await fetch('/api/save-strategy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (result.status === 'success') {
+          alert('Target race disimpan!');
+          loadDashboard(); // refresh
+          switchPage('dashboard');
+        } else {
+          alert('Gagal menyimpan');
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
     }
 
-    init();
+    // Load data saat halaman dimuat
+    window.addEventListener('load', loadDashboard);
   </script>
 </body>
 </html>
