@@ -76,6 +76,26 @@
     .nav-item.active { background-color: #1e3349; color: white; }
     .nav-item.active i { color: white; }
     .nav-item:hover { background-color: #1a2a40; color: #ecf3ff; }
+    
+    /* TOMBOL SYNC */
+    .btn-sync {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fc4c02;
+      color: white;
+      margin: 10px;
+      padding: 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .btn-sync:hover {
+      background: #e04300;
+    }
+
     .user-chip {
       margin-top: auto;
       display: flex;
@@ -243,11 +263,18 @@
         <div class="logo-icon">AX</div>
         <div class="logo-text">APEX<span>nity</span></div>
       </div>
+      
       <nav class="nav">
         <div class="nav-item active" onclick="switchPage('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</div>
         <div class="nav-item" onclick="switchPage('race')"><i class="fas fa-calendar-alt"></i> Race Target</div>
         <div class="nav-item" onclick="switchPage('strategy')"><i class="fas fa-map"></i> Strategy</div>
       </nav>
+
+      <!-- TOMBOL SYNC STRAVA (sesuaikan redirect_uri dengan domain Vercel-mu) -->
+      <a href="https://www.strava.com/oauth/authorize?client_id=173527&response_type=code&redirect_uri=https://[domain-mu]/api/metrics&scope=activity:read_all" class="btn-sync">
+        <i class="fas fa-sync-alt"></i> <span>SYNC STRAVA</span>
+      </a>
+
       <div class="user-chip">
         <div class="avatar" id="userInitial">A</div>
         <div class="user-info">
@@ -474,8 +501,7 @@
         });
 
         // Simpan userId untuk keperluan save race (diambil dari mana? Mungkin dari localStorage nanti)
-        // Sementara kita simpan dari response? Tidak ada di response. Kita pakai user_id dari cookie atau localStorage nanti.
-        // Untuk sementara, kita tidak pakai uId di saveRace, tapi bisa pakai fetch tanpa user_id karena backend akan resolve default.
+        // Sementara kita tidak pakai uId di saveRace, tapi bisa pakai fetch tanpa user_id karena backend akan resolve default.
       } catch (err) {
         console.error('Gagal load dashboard:', err);
       }
