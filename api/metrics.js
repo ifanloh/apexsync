@@ -10,9 +10,7 @@ if (!global._pool) {
 }
 const pool = global._pool;
 
-/**
- * COROS-like: HR-based training load (TRIMP)
- */
+// Helper: HR-based training load (TRIMP)
 function estimateHrRestMaxFallback({ avgHr, maxHr }) {
   const hrRest = 55;
   let hrMax = 190;
@@ -20,24 +18,17 @@ function estimateHrRestMaxFallback({ avgHr, maxHr }) {
   else if (Number.isFinite(avgHr) && avgHr > 120) hrMax = Math.max(180, Math.min(205, avgHr + 35));
   return { hrRest, hrMax };
 }
-
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
-}
-
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 function calcHrLoadTRIMP(movingTimeS, avgHr, hrRest, hrMax) {
   const durMin = (Number(movingTimeS) || 0) / 60;
   const aHr = Number(avgHr);
-
   if (!Number.isFinite(durMin) || durMin <= 0) return 0;
   if (!Number.isFinite(aHr) || aHr <= 0) return durMin * 1.0;
-
   const denom = hrMax - hrRest;
   if (!Number.isFinite(denom) || denom <= 10) return durMin * 1.0;
-
   const hrr = clamp((aHr - hrRest) / denom, 0, 1);
   const trimp = durMin * hrr * 0.64 * Math.exp(1.92 * hrr);
-  return Math.round(trimp * 10 * 10) / 10; // scaling
+  return Math.round(trimp * 10 * 10) / 10;
 }
 
 async function calculateMetrics(client, userId) {
@@ -173,7 +164,11 @@ module.exports = async (req, res) => {
         totals: { distance_m: 0, moving_time_s: 0, elev_m: 0, tss: 0 },
         timeseries: [],
         weekly: [],
-        activities: []
+        activities: [],
+        recovery: { pct: 0, hours: 0 },
+        threshold_pace: 300,
+        race_predictions: [],
+        prs: { max_dist_km: 0, max_elev_m: 0 }
       });
     }
 
@@ -226,6 +221,37 @@ module.exports = async (req, res) => {
       [userId]
     );
 
+    // === METRIK TAMBAHAN ===
+    // Recovery (berdasarkan ATL)
+    const atlVal = today.atl || 0;
+    const recoveryPct = Math.max(0, Math.min(100, 100 - atlVal * 0.7));
+    const recoveryHours = Math.round((100 - recoveryPct) * 0.6);
+
+    // Threshold pace (estimasi dari CTL: 250 - 0.4*CTL detik/km, dibatasi 240-400)
+    const ctlVal = today.ctl || 0;
+    let thresholdPace = 250 - 0.4 * ctlVal;
+    thresholdPace = Math.max(240, Math.min(400, thresholdPace)); // 4:00 - 6:40 /km
+
+    // Race predictions (Riegel formula: T2 = T1 * (D2/D1)^1.06)
+    const baseDist = 1.609; // 1 mile
+    const baseTime = thresholdPace * baseDist; // detik untuk 1 mile
+    const distances = [5, 10, 21.1, 42.2];
+    const racePredictions = distances.map(d => ({
+      dist: d,
+      time: baseTime * Math.pow(d / baseDist, 1.06)
+    }));
+
+    // Personal Records (sederhana: jarak terjauh, elevasi tertinggi)
+    const prRes = await client.query(
+      `SELECT
+         MAX(distance) AS max_dist,
+         MAX(total_elevation_gain) AS max_elev
+       FROM activities WHERE user_id = $1`,
+      [userId]
+    );
+    const maxDistM = prRes.rows[0]?.max_dist || 0;
+    const maxElevM = prRes.rows[0]?.max_elev || 0;
+
     return res.json({
       profile: {
         display_name: profile.display_name || 'Athlete',
@@ -262,7 +288,17 @@ module.exports = async (req, res) => {
         duration_s: Number(a.moving_time) || 0,
         tss: Number(a.tss) || 0,
         start_date: a.start_date
-      }))
+      })),
+      recovery: {
+        pct: Math.round(recoveryPct),
+        hours: recoveryHours
+      },
+      threshold_pace: Math.round(thresholdPace),
+      race_predictions: racePredictions,
+      prs: {
+        max_dist_km: maxDistM / 1000,
+        max_elev_m: maxElevM
+      }
     });
   } catch (e) {
     console.error(e);
