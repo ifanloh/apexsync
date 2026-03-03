@@ -10,7 +10,7 @@ if (!global._pool) {
 }
 const pool = global._pool;
 
-// Helper: HR-based training load (TRIMP)
+// Helper: HR-based training load (TRIMP) - tanpa faktor pengali
 function estimateHrRestMaxFallback({ avgHr, maxHr }) {
   const hrRest = 55;
   let hrMax = 190;
@@ -18,17 +18,31 @@ function estimateHrRestMaxFallback({ avgHr, maxHr }) {
   else if (Number.isFinite(avgHr) && avgHr > 120) hrMax = Math.max(180, Math.min(205, avgHr + 35));
   return { hrRest, hrMax };
 }
-function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
+}
+
 function calcHrLoadTRIMP(movingTimeS, avgHr, hrRest, hrMax) {
   const durMin = (Number(movingTimeS) || 0) / 60;
   const aHr = Number(avgHr);
+
   if (!Number.isFinite(durMin) || durMin <= 0) return 0;
-  if (!Number.isFinite(aHr) || aHr <= 0) return durMin * 1.0;
+  if (!Number.isFinite(aHr) || aHr <= 0) {
+    // Fallback: durasi saja (asumsi intensitas rendah)
+    return durMin * 1.0;
+  }
+
   const denom = hrMax - hrRest;
   if (!Number.isFinite(denom) || denom <= 10) return durMin * 1.0;
+
   const hrr = clamp((aHr - hrRest) / denom, 0, 1);
   const trimp = durMin * hrr * 0.64 * Math.exp(1.92 * hrr);
-  return Math.round(trimp * 10 * 10) / 10;
+
+  // ⚠️ PERBAIKAN: tidak dikali 10 lagi
+  const scaled = trimp;
+
+  return Math.round(scaled * 10) / 10;
 }
 
 async function calculateMetrics(client, userId) {
@@ -222,30 +236,24 @@ module.exports = async (req, res) => {
     );
 
     // === METRIK TAMBAHAN ===
-    // Recovery (berdasarkan ATL)
     const atlVal = today.atl || 0;
     const recoveryPct = Math.max(0, Math.min(100, 100 - atlVal * 0.7));
     const recoveryHours = Math.round((100 - recoveryPct) * 0.6);
 
-    // Threshold pace (estimasi dari CTL: 250 - 0.4*CTL detik/km, dibatasi 240-400)
     const ctlVal = today.ctl || 0;
     let thresholdPace = 250 - 0.4 * ctlVal;
-    thresholdPace = Math.max(240, Math.min(400, thresholdPace)); // 4:00 - 6:40 /km
+    thresholdPace = Math.max(240, Math.min(400, thresholdPace));
 
-    // Race predictions (Riegel formula: T2 = T1 * (D2/D1)^1.06)
-    const baseDist = 1.609; // 1 mile
-    const baseTime = thresholdPace * baseDist; // detik untuk 1 mile
+    const baseDist = 1.609;
+    const baseTime = thresholdPace * baseDist;
     const distances = [5, 10, 21.1, 42.2];
     const racePredictions = distances.map(d => ({
       dist: d,
       time: baseTime * Math.pow(d / baseDist, 1.06)
     }));
 
-    // Personal Records (sederhana: jarak terjauh, elevasi tertinggi)
     const prRes = await client.query(
-      `SELECT
-         MAX(distance) AS max_dist,
-         MAX(total_elevation_gain) AS max_elev
+      `SELECT MAX(distance) AS max_dist, MAX(total_elevation_gain) AS max_elev
        FROM activities WHERE user_id = $1`,
       [userId]
     );
