@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/metrics", "destination": "/api/metrics.js" },
+    { "source": "/api/save-strategy", "destination": "/api/save-strategy.js" }
+  ]
+}

@@ -1,7 +1,13 @@
 {
   "name": "apexnity",
   "version": "1.0.0",
-  "main": "api/index.js",
+  "private": true,
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod",
+    "lint": "node -c api/metrics.js && node -c api/save-strategy.js"
+  },
   "dependencies": {
     "pg": "^8.11.3",
     "axios": "^1.6.0"
